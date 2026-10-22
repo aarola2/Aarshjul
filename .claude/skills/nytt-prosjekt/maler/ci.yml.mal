@@ -1,0 +1,94 @@
+# Mal for CI. /nytt-prosjekt fyller inn mapper og kommandoer fra CLAUDE.md.
+# Alle jobber skal bli "required status checks" i rulesettet etter første kjøring.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  kontroll:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mappe: [{{MAPPE_1}}, {{MAPPE_2}}]
+    defaults:
+      run:
+        working-directory: ${{ matrix.mappe }}
+    steps:
+      - uses: actions/checkout@{{SHA_PINNET}}
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@{{SHA_PINNET}}   # tilpass til stacken
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ matrix.mappe }}/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck --if-present
+      - run: npm test -- --coverage   # sett dekningsgrense i testkonfigen, ikke her
+      - run: npm run build
+
+  avhengigheter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{{SHA_PINNET}}
+        with:
+          persist-credentials: false
+      - run: cd {{MAPPE_1}} && npm audit --audit-level=high
+      - run: cd {{MAPPE_2}} && npm audit --audit-level=high
+
+  hemmeligheter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{{SHA_PINNET}}
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@{{SHA_PINNET}}
+
+  kodeanalyse:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@{{SHA_PINNET}}
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@{{SHA_PINNET}}
+        with:
+          languages: javascript-typescript   # tilpass til stacken
+      - uses: github/codeql-action/analyze@{{SHA_PINNET}}
+
+  e2e:   # Playwright. Fjern jobben hvis prosjektet ikke har UI.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: {{E2E_MAPPE}}   # mappen som har playwright.config.ts
+    steps:
+      - uses: actions/checkout@{{SHA_PINNET}}
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@{{SHA_PINNET}}
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: {{E2E_MAPPE}}/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e          # webServer i playwright.config.ts starter appen
+      - uses: actions/upload-artifact@{{SHA_PINNET}}
+        if: always()
+        with:
+          name: playwright-rapport
+          path: |
+            {{E2E_MAPPE}}/playwright-report/
+            {{E2E_MAPPE}}/test-results/
+          retention-days: 14
