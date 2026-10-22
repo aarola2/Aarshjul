@@ -1,0 +1,118 @@
+# Utrulling til GitHub Pages.
+# bygg: én immutabel artefakt + sha256-digest. staging: røyktest av nøyaktig den artefakten.
+# produksjon: publiserer samme artefakt (aldri nytt bygg). Stengt (fail closed) til eieren
+# har verifisert required reviewers på miljøet production og satt variabelen
+# PRODUKSJON_GODKJENNING_VERIFISERT=true. Agenten skal ikke endre denne filen.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  bygg:
+    # Bare grønn CI på push til main i dette repoet (ikke PR-er fra forks med branch-navn main)
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-id: ${{ steps.pages.outputs.artifact_id }}
+      digest: ${{ steps.digest.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+      - id: pages
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: frontend/dist
+          retention-days: 30   # må overleve ventetiden på godkjenning til produksjon
+      - id: digest
+        run: echo "sha256=$(sha256sum "$RUNNER_TEMP/artifact.tar" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  staging:
+    needs: bygg
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.bygg.outputs.artifact-id }}
+          path: ${{ runner.temp }}/artefakt
+      - name: Verifiser digest
+        env:
+          FORVENTET: ${{ needs.bygg.outputs.digest }}
+        run: echo "$FORVENTET  $RUNNER_TEMP/artefakt/artifact.tar" | sha256sum -c -
+      - name: Pakk ut artefakten til dist/
+        run: mkdir -p frontend/dist && tar -xf "$RUNNER_TEMP/artefakt/artifact.tar" -C frontend/dist
+      - name: Røyktest mot artefakten
+        run: npm run e2e
+        working-directory: frontend
+        env:
+          E2E_PREVIEW: '1'   # serverer dist/ med vite preview, bygger ikke på nytt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: staging-playwright-rapport
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 14
+
+  produksjon:
+    needs: [bygg, staging]
+    if: vars.PRODUKSJON_GODKJENNING_VERIFISERT == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.bygg.outputs.artifact-id }}
+          path: ${{ runner.temp }}/artefakt
+      - name: Verifiser digest
+        env:
+          FORVENTET: ${{ needs.bygg.outputs.digest }}
+        run: echo "$FORVENTET  $RUNNER_TEMP/artefakt/artifact.tar" | sha256sum -c -
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages

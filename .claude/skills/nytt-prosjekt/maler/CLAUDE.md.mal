@@ -1,0 +1,82 @@
+# {{PROSJEKTNAVN}}
+
+{{BESKRIVELSE}}
+
+## Stack
+
+- Frontend: {{FRONTEND}}
+- Backend: {{BACKEND}}
+- Test: {{TESTVERKTØY}}
+- Lint: {{LINT}}
+
+## Kommandoer
+
+Kjøres fra mappen som står i overskriften.
+
+### {{MAPPE_1}}/
+- Start: `{{DEV}}`
+- Test: `{{TEST}}`
+- Lint: `{{LINT_CMD}}`
+- Build: `{{BUILD}}`
+- Typecheck: `{{TYPECHECK}}`
+- E2E (Playwright, bare med UI): `{{E2E}}`
+
+### {{MAPPE_2}}/
+(Samme liste. Fjern seksjonen hvis den ikke finnes.)
+
+## Mappestruktur
+
+```
+{{MAPPE_1}}/        kode og tester (tester ved siden av koden)
+{{MAPPE_2}}/
+docs/krav/          brukerhistorier
+docs/design/        wireframe / klikkbar prototype
+.github/            issue-mal og CI
+.claude/            rettigheter og skills
+```
+
+## Kodestandard
+
+- Strengeste typesjekk stacken tilbyr.
+- Navn i koden på engelsk. Meldinger til brukeren på norsk.
+- Aldri hent eller kjør pakker utenfor `package.json` (`npx <pakke>`, `npx --yes`, `npm exec`, `dlx`, `bunx`). Unntak: `npx playwright test` og `npx playwright install chromium`. Appstart i e2e skjer via `webServer` i Playwright-konfigen.
+- Nettleserlagring bruker unik nøkkel med prosjektnavn og versjon, og alt som leses derfra valideres før bruk.
+- Hver ny funksjon har en test. Tester ligger ved siden av koden.
+- Små funksjoner. Ingen død kode.
+- E2E-tester (Playwright): velg elementer med `getByRole`/`getByLabel`/`getByText`, aldri CSS-klasser. Ingen faste ventetider. Én test per akseptkriterium i UI-issues. Skjermbilder lagres i testrapporten.
+
+## Arbeidsmåte
+
+- Ett issue = én branch (`feature/<nr>-<navn>`) = én PR med `Closes #<nr>`.
+- Aldri push til `main`. Aldri force push. Aldri `git add .`.
+- Se `.claude/POLICY.md`: nivå 1–2 krever forhåndsgodkjenning, nivå 3 gir autonom PR (men `/bygg-issue-nr` og `/bygg-en-og-en` viser alltid planen først), nivå 4 muliggjør autonom merge bare for lav risiko med eksterne gates.
+- Avviker ønsket fra issuet: oppdater issuet først.
+- Et issue er ferdig først når PR-en er merget.
+- Kjør test, lint og build før commit. Rapporter hva som ikke er verifisert.
+
+## Felles styring
+
+Les `.claude/POLICY.md` først. KI-review er rådgivende; CI, branch protection og produksjonssperrer må håndheves utenfor agenten.
+
+## Grønn sone (kan gjøres selvstendig)
+
+Små funksjoner med tester, UI-detaljer ut fra godkjent wireframe, dokumentasjon, tester.
+
+## Rød sone (plan og godkjenning alltid)
+
+Autentisering, penger, personopplysninger, database og migreringer, sikkerhet, mappestruktur, CI og hemmeligheter, nye pakker.
+
+## Utrulling
+
+- Produksjon er stengt til variabelen `PRODUKSJON_GODKJENNING_VERIFISERT` settes til `true` av eieren. Ikke endre `deploy.yml`, miljøer eller variabler.
+- Se `.claude/POLICY.md`.
+
+## Ikke rør
+
+- `.env` og andre hemmeligheter
+- `.claude/settings.json` uten at jeg ber om det
+- Alt under «Utenfor scope» i issuet
+
+## Forklaringer
+
+Når du lager noe jeg ikke selv kunne forklart for en kollega, legg ved en kort forklaring på norsk i planen eller rapporten.
