@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import Wheel from './Wheel.tsx'
 
-const renderWheel = () => render(<Wheel year={2026} />).container
+const renderWheel = () => render(<Wheel today={new Date(2026, 2, 15)} />).container
 
 describe('Wheel', () => {
   it('er en gruppe med navnet «Årshjul med gjøremål»', () => {
@@ -40,7 +40,7 @@ describe('Wheel', () => {
 
 describe('Wheel, dagsstreker', () => {
   const ticksOf = (year: number) => {
-    render(<Wheel year={year} />)
+    render(<Wheel today={new Date(year, 2, 15)} />)
     return screen.getByTestId('dagsstreker')
   }
 
@@ -73,5 +73,70 @@ describe('Wheel, dagsstreker', () => {
     const first = ticksOf(2026).querySelector('line')
     const length = Number(first?.getAttribute('y2')) - Number(first?.getAttribute('y1'))
     expect(length).toBeCloseTo(26, 0)
+  })
+})
+
+describe('Wheel, dagens dato', () => {
+  const renderOn = (today: Date) => {
+    const { container } = render(<Wheel today={today} />)
+    return { container, marker: screen.getByTestId('dagens-dato') }
+  }
+  const dayNumbers = (container: HTMLElement, text: string) =>
+    [...container.querySelectorAll('text')].filter((node) => node.textContent === text)
+
+  it('viser dagens datotall i ringen', () => {
+    const { marker } = renderOn(new Date(2026, 9, 26))
+    expect(marker.querySelectorAll('circle')).toHaveLength(1)
+    expect(marker.querySelector('text')?.textContent).toBe('26')
+  })
+
+  it('viser den 20. bare i ringen når den er dagens dato', () => {
+    const { container, marker } = renderOn(new Date(2026, 9, 20))
+    expect(marker.querySelector('text')?.textContent).toBe('20')
+    expect(dayNumbers(container, '20')).toHaveLength(12)
+  })
+
+  it('har bare én ring og én rød strek, på dagens dato', () => {
+    const { container } = renderOn(new Date(2026, 9, 26))
+    expect(screen.getAllByTestId('dagens-dato')).toHaveLength(1)
+    expect(container.querySelectorAll('circle.today-ring')).toHaveLength(1)
+    const todayTicks = container.querySelectorAll('line.today')
+    expect(todayTicks).toHaveLength(1)
+    // The red tick and the ring lie on the same line from the centre
+    const ring = container.querySelector('circle.today-ring')
+    const tick = todayTicks[0]
+    const tickAngle = Math.atan2(Number(tick?.getAttribute('x1')) - 500, 500 - Number(tick?.getAttribute('y1')))
+    const ringAngle = Math.atan2(Number(ring?.getAttribute('cx')) - 500, 500 - Number(ring?.getAttribute('cy')))
+    expect(ringAngle).toBeCloseTo(tickAngle, 6)
+  })
+
+  it('flytter ringen når datoen endres', () => {
+    const { container, rerender } = render(<Wheel today={new Date(2026, 9, 26)} />)
+    const before = container.querySelector('circle.today-ring')?.getAttribute('cx')
+    rerender(<Wheel today={new Date(2026, 9, 27)} />)
+    expect(container.querySelector('circle.today-ring')?.getAttribute('cx')).not.toBe(before)
+    expect(screen.getByTestId('dagens-dato').querySelector('text')?.textContent).toBe('27')
+    expect(container.querySelectorAll('circle.today-ring')).toHaveLength(1)
+  })
+
+  it('bytter til nytt år ved årsskiftet', () => {
+    const { container, rerender } = render(<Wheel today={new Date(2024, 11, 31)} />)
+    expect(screen.getByTestId('dagsstreker').querySelectorAll('line')).toHaveLength(366)
+    rerender(<Wheel today={new Date(2025, 0, 1)} />)
+    expect(screen.getByTestId('dagsstreker').querySelectorAll('line')).toHaveLength(365)
+    expect(screen.getByTestId('dagens-dato').querySelector('text')?.textContent).toBe('1')
+    expect(dayNumbers(container, '1')).toHaveLength(12)
+  })
+
+  it.each([
+    [new Date(2026, 9, 26), '26.', 'oktober', 'mandag'],
+    [new Date(2026, 9, 27), '27.', 'oktober', 'tirsdag'],
+    [new Date(2024, 1, 29), '29.', 'februar', 'torsdag'],
+    [new Date(2026, 0, 4), '4.', 'januar', 'søndag'],
+  ])('senterfeltet viser %s som %s %s, %s', (today, day, month, weekday) => {
+    renderOn(today)
+    expect(screen.getByText(day, { exact: true })).toBeInTheDocument()
+    expect(screen.getByText(month, { exact: true })).toBeInTheDocument()
+    expect(screen.getByText(weekday, { exact: true })).toBeInTheDocument()
   })
 })
