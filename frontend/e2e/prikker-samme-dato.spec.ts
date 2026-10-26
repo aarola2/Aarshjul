@@ -53,9 +53,14 @@ const asSortedKeys = (positions: { x: number; y: number }[]) =>
 async function positionsByTitle(page: Page) {
   const positions = await dotPositions(page)
   const byTitle: Record<string, string> = {}
+  let previous = ''
   for (const [i, dot] of (await dots(page).all()).entries()) {
     await dot.hover()
+    // Wait until the tooltip shows the title of this dot, not the one before
+    await expect(page.getByRole('tooltip')).toBeVisible()
+    if (previous) await expect(page.getByRole('tooltip')).not.toHaveText(previous)
     const title = (await page.getByRole('tooltip').textContent()) ?? ''
+    previous = title
     const position = positions[i]
     byTitle[title] = position ? `${String(position.x)},${String(position.y)}` : ''
   }

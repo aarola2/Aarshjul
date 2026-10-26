@@ -131,3 +131,88 @@ describe('placeDots', () => {
     }
   })
 })
+
+describe('placeDots, nabodatoer og ytelse', () => {
+  // Straightforward version that compares with every dot placed so far, to check that looking only
+  // at neighbouring days gives the same result
+  function placeDotsReference(todos: readonly Todo[], year: number) {
+    const dots = todos.flatMap((t) =>
+      t.dates.map((date) => ({ todo: t, date, dayIndex: dayOfYear(date.month, date.day, year), radius: 0 })),
+    )
+    const perDay = new Map<number, number>()
+    for (const { dayIndex } of dots) perDay.set(dayIndex, (perDay.get(dayIndex) ?? 0) + 1)
+    const sorted = [...dots].sort((a, b) =>
+      a.todo.id < b.todo.id ? -1 : a.todo.id > b.todo.id ? 1 : a.dayIndex - b.dayIndex,
+    )
+    const used = new Map<number, Set<number>>()
+    const placed: typeof dots = []
+    const point = (radius: number, dayIndex: number) => pointOnCircle(radius, ((dayIndex + 0.5) / (year % 4 === 0 ? 366 : 365)) * 2 * Math.PI)
+    for (const dot of sorted) {
+      const slots = Math.max(DOT_SLOTS, perDay.get(dot.dayIndex) ?? 0)
+      const taken = used.get(dot.dayIndex) ?? new Set<number>()
+      used.set(dot.dayIndex, taken)
+      const start = hashId(dot.todo.id) % slots
+      const free = Array.from({ length: slots }, (_, k) => (start + k) % slots).filter((s) => !taken.has(s))
+      const radiusOf = (slot: number) => R_DOT_MIN + ((slot + 0.5) * (R_DOT_MAX - R_DOT_MIN)) / slots
+      const clear = (slot: number) =>
+        placed.every((other) => {
+          const [ax, ay] = point(radiusOf(slot), dot.dayIndex)
+          const [bx, by] = point(other.radius, other.dayIndex)
+          return Math.hypot(ax - bx, ay - by) >= MIN_DOT_GAP
+        })
+      const slot = free.find(clear) ?? free[0] ?? start
+      taken.add(slot)
+      dot.radius = radiusOf(slot)
+      placed.push(dot)
+    }
+    return dots.map(({ todo: t, date, radius }) => ({ todo: t, date, radius }))
+  }
+
+  const randomTodos = (next: () => number, count: number, datesEach: number) =>
+    Array.from({ length: count }, (_, i) => {
+      const dates = new Map<string, [number, number]>()
+      while (dates.size < datesEach) {
+        const month = 1 + Math.floor(next() * 12)
+        const day = 1 + Math.floor(next() * 28)
+        dates.set(`${String(month)}.${String(day)}`, [month, day])
+      }
+      return todo(`x${String(i)}`, ...dates.values())
+    })
+
+  it('gir samme resultat som å sammenligne med alle prikker, også rundt årsskiftet', () => {
+    const next = random(7)
+    for (let run = 0; run < 50; run++) {
+      const year = run % 2 === 0 ? 2026 : 2024
+      const todos = [
+        ...randomTodos(next, 1 + Math.floor(next() * 60), 1 + Math.floor(next() * 4)),
+        todo(`dec${String(run)}`, [12, 30], [12, 31]),
+        todo(`jan${String(run)}`, [1, 1], [1, 2]),
+      ]
+      expect(placeDots(todos, year)).toEqual(placeDotsReference(todos, year))
+    }
+  })
+
+  it('gir samme plassering uansett rekkefølge på datoene i et gjøremål', () => {
+    const forwards = placeDots([todo('a', [5, 1], [5, 2]), todo('b', [5, 1])], 2026)
+    const backwards = placeDots([todo('a', [5, 2], [5, 1]), todo('b', [5, 1])], 2026)
+    const byDate = (list: ReturnType<typeof placeDots>) =>
+      Object.fromEntries(list.map((dot) => [`${dot.todo.id} ${String(dot.date.month)}.${String(dot.date.day)}`, dot.radius]))
+    expect(byDate(backwards)).toEqual(byDate(forwards))
+  })
+
+  it('29. februar og 1. mars i år uten skuddår deler linje, men aldri plass', () => {
+    const todos = [todo('a', [2, 29], [3, 1]), todo('b', [3, 1]), todo('c', [2, 29])]
+    expectAllPositionsDifferent(todos, 2026)
+    expect(placeDots(todos, 2026)).toHaveLength(4)
+  })
+
+  it('plasserer 200 gjøremål med 12 datoer hver raskt', () => {
+    const todos = randomTodos(random(99), 200, 12)
+    const started = performance.now()
+    const placed = placeDots(todos, 2026)
+    const elapsed = performance.now() - started
+    expect(placed).toHaveLength(2400)
+    // Generous limit so the test is stable on slow machines; before the fix this took about 3 seconds
+    expect(elapsed).toBeLessThan(500)
+  })
+})

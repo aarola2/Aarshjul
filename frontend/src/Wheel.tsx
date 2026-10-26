@@ -1,4 +1,4 @@
-import { type MouseEvent, useState } from 'react'
+import { type MouseEvent, useMemo, useState } from 'react'
 import { placeDots } from './dotPlacement.ts'
 import type { Todo } from './storage.ts'
 import {
@@ -35,12 +35,16 @@ interface Tooltip {
 const WEEKDAYS = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag']
 const RING_RADIUS = 17
 
+const NO_TODOS: readonly Todo[] = []
+
 const labelArcId = (month: number) => `month-arc-${String(month)}`
 
-export default function Wheel({ today, todos = [] }: WheelProps) {
+export default function Wheel({ today, todos = NO_TODOS }: WheelProps) {
   const year = today.getFullYear()
   const isToday = (month: number, day: number) => month === today.getMonth() + 1 && day === today.getDate()
   const [tooltip, setTooltip] = useState<Tooltip | null>(null)
+  // Placing is only redone when the todos or the year change, not on every hover
+  const dots = useMemo(() => placeDots(todos, year), [todos, year])
 
   // The tooltip is placed above the dot, relative to the area around the wheel
   const showTooltip = (event: MouseEvent<SVGGElement>, title: string) => {
@@ -81,7 +85,7 @@ export default function Wheel({ today, todos = [] }: WheelProps) {
         </g>
         <TodayMarker today={today} />
         <Centre today={today} />
-        {placeDots(todos, year).map(({ todo, date: { month, day }, radius }) => {
+        {dots.map(({ todo, date: { month, day }, radius }) => {
           const [cx, cy] = pointOnCircle(radius, dayAngle(month, day, year))
           return (
             <g
