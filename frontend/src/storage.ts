@@ -1,0 +1,99 @@
+export interface TodoDate {
+  month: number
+  day: number
+}
+
+export interface Todo {
+  id: string
+  title: string
+  description: string
+  dates: TodoDate[]
+  createdAt: string
+}
+
+export type LoadResult = { status: 'ok'; todos: Todo[] } | { status: 'corrupt' }
+
+export const STORAGE_KEY = 'aarhjul:v1:todos'
+export const MAX_TITLE_LENGTH = 60
+export const MAX_DESCRIPTION_LENGTH = 500
+export const MAX_DATES = 12
+
+// February has 29 days so that 29 February can be stored all years.
+const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+const TODO_KEYS = ['id', 'title', 'description', 'dates', 'createdAt']
+const DATE_KEYS = ['month', 'day']
+
+export function saveTodos(todos: readonly Todo[]): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
+}
+
+export function loadTodos(): LoadResult {
+  const raw = localStorage.getItem(STORAGE_KEY)
+  if (raw === null) return { status: 'ok', todos: [] }
+  const parsed = parseJson(raw)
+  return isTodoList(parsed) ? { status: 'ok', todos: parsed } : { status: 'corrupt' }
+}
+
+function parseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return undefined
+  }
+}
+
+function isTodoList(value: unknown): value is Todo[] {
+  return Array.isArray(value) && value.every(isTodo) && isUnique(value.map((todo) => todo.id))
+}
+
+function isTodo(value: unknown): value is Todo {
+  if (!hasExactKeys(value, TODO_KEYS)) return false
+  const { id, title, description, dates, createdAt } = value
+  return (
+    typeof id === 'string' &&
+    id !== '' &&
+    typeof title === 'string' &&
+    title.length >= 1 &&
+    title.length <= MAX_TITLE_LENGTH &&
+    typeof description === 'string' &&
+    description.length <= MAX_DESCRIPTION_LENGTH &&
+    isDateList(dates) &&
+    isTimestamp(createdAt)
+  )
+}
+
+function isDateList(value: unknown): value is TodoDate[] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 1 &&
+    value.length <= MAX_DATES &&
+    value.every(isTodoDate) &&
+    isUnique(value.map((date) => `${String(date.month)}.${String(date.day)}`))
+  )
+}
+
+function isTodoDate(value: unknown): value is TodoDate {
+  if (!hasExactKeys(value, DATE_KEYS)) return false
+  const { month, day } = value
+  if (typeof month !== 'number' || typeof day !== 'number') return false
+  if (!Number.isInteger(month) || !Number.isInteger(day)) return false
+  const maxDay = DAYS_IN_MONTH[month - 1]
+  return maxDay !== undefined && day >= 1 && day <= maxDay
+}
+
+// Only the exact format written by Date.toISOString() is accepted.
+function isTimestamp(value: unknown): boolean {
+  if (typeof value !== 'string') return false
+  const time = Date.parse(value)
+  return !Number.isNaN(time) && new Date(time).toISOString() === value
+}
+
+function hasExactKeys(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const actual = Object.keys(value)
+  return actual.length === keys.length && keys.every((key) => actual.includes(key))
+}
+
+function isUnique(values: readonly string[]): boolean {
+  return new Set(values).size === values.length
+}
