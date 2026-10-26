@@ -68,4 +68,10 @@ describe('Wheel, dagsstreker', () => {
     expect(Number(first?.getAttribute('x1'))).toBeLessThan(505)
     expect(Number(first?.getAttribute('y1'))).toBeLessThan(500)
   })
+
+  it('tegner den 1. med lang strek innover fra fargebåndet', () => {
+    const first = ticksOf(2026).querySelector('line')
+    const length = Number(first?.getAttribute('y2')) - Number(first?.getAttribute('y1'))
+    expect(length).toBeCloseTo(26, 0)
+  })
 })

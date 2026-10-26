@@ -37,6 +37,9 @@ test.describe('i et vanlig år', () => {
   })
 
   test('strekene står i riktig vinkel: 1. januar kl. 12, 1. juli nederst', async ({ page }) => {
+    expect(await angleOf(page, ticks(page).nth(0))).toBeLessThan(3)
+    // 1 July is day 182 of 2026, index 181
+    expect(Math.abs((await angleOf(page, ticks(page).nth(181))) - 180)).toBeLessThan(3)
     const ones = page.getByText('1', { exact: true })
     expect(await angleOf(page, ones.nth(0))).toBeLessThan(3)
     expect(Math.abs((await angleOf(page, ones.nth(6))) - 180)).toBeLessThan(3)

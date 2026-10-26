@@ -71,7 +71,7 @@ export function tickLength(day: number): number {
   return hasDayNumber(day) ? 18 : 9
 }
 
-export const monthStartAngle =(month: number, year: number) => angleOf(dayOfYear(month, 1, year), year)
+export const monthStartAngle = (month: number, year: number) => angleOf(dayOfYear(month, 1, year), year)
 
 export const monthEndAngle = (month: number, year: number) =>
   angleOf(dayOfYear(month, 1, year) + daysInMonth(month, year), year)
