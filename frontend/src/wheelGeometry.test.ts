@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
   angleOf,
+  dayAngle,
   dayOfYear,
   daysInMonth,
   daysInYear,
+  daysOfYear,
+  hasDayNumber,
   isLeapYear,
   monthEndAngle,
   monthStartAngle,
   MONTHS,
   pointOnCircle,
+  tickLength,
 } from './wheelGeometry.ts'
 
 const degrees = (radians: number) => (radians * 180) / Math.PI
@@ -97,5 +101,47 @@ describe('måneder', () => {
       'winter', 'winter', 'spring', 'spring', 'spring', 'summer',
       'summer', 'summer', 'autumn', 'autumn', 'autumn', 'winter',
     ])
+  })
+})
+
+describe('dager', () => {
+  it.each([
+    [2026, 365, false],
+    [2024, 366, true],
+  ])('%i har %i dager, 29. februar: %s', (year, count, hasLeapDay) => {
+    const days = daysOfYear(year)
+    expect(days).toHaveLength(count)
+    expect(days[0]).toEqual({ month: 1, day: 1 })
+    expect(days.at(-1)).toEqual({ month: 12, day: 31 })
+    expect(days.some(({ month, day }) => month === 2 && day === 29)).toBe(hasLeapDay)
+  })
+
+  it('gir hver dag bare én gang', () => {
+    const keys = daysOfYear(2024).map(({ month, day }) => `${String(month)}.${String(day)}`)
+    expect(new Set(keys).size).toBe(366)
+  })
+
+  it.each([2026, 2024])('vinkelen midt i dagen øker gjennom hele %i', (year) => {
+    const angles = daysOfYear(year).map(({ month, day }) => dayAngle(month, day, year))
+    for (let i = 1; i < angles.length; i++) expect(angles[i]).toBeGreaterThan(angles[i - 1] ?? Infinity)
+    expect(angles[0]).toBeGreaterThan(0)
+    expect(angles.at(-1)).toBeLessThan(2 * Math.PI)
+  })
+
+  it.each([2026, 2024])('1. januar står kl. 12 og 1. juli nederst i %i', (year) => {
+    expect(degrees(dayAngle(1, 1, year))).toBeLessThan(1)
+    expect(Math.abs(degrees(dayAngle(7, 1, year)) - 180)).toBeLessThan(2)
+  })
+
+  it('bare den 1., 10. og 20. har datotall', () => {
+    const numbered = Array.from({ length: 31 }, (_, i) => i + 1).filter(hasDayNumber)
+    expect(numbered).toEqual([1, 10, 20])
+  })
+
+  it('den 1. har lengst strek, så den 10. og 20., så resten', () => {
+    expect(tickLength(1)).toBeGreaterThan(tickLength(10))
+    expect(tickLength(10)).toBe(tickLength(20))
+    expect(tickLength(20)).toBeGreaterThan(tickLength(2))
+    expect(tickLength(2)).toBe(tickLength(31))
   })
 })

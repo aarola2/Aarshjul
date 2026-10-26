@@ -37,3 +37,41 @@ describe('Wheel', () => {
     }
   })
 })
+
+describe('Wheel, dagsstreker', () => {
+  const ticksOf = (year: number) => {
+    render(<Wheel year={year} />)
+    return screen.getByTestId('dagsstreker')
+  }
+
+  it.each([
+    [2026, 365],
+    [2024, 366],
+  ])('tegner én strek per dag i %i (%i)', (year, count) => {
+    expect(ticksOf(year).querySelectorAll('line')).toHaveLength(count)
+  })
+
+  it('har datotall 1, 10 og 20 i hver måned', () => {
+    const numbers = [...ticksOf(2026).querySelectorAll('text')].map((text) => text.textContent)
+    expect(numbers).toEqual(Array.from({ length: 12 }, () => ['1', '10', '20']).flat())
+  })
+
+  it('gir den 1. og den 10. og 20. lengre streker', () => {
+    const ticks = ticksOf(2026)
+    expect(ticks.querySelectorAll('line.first')).toHaveLength(12)
+    expect(ticks.querySelectorAll('line.major')).toHaveLength(24)
+  })
+
+  it('starter 1. januar rett over sentrum', () => {
+    const first = ticksOf(2026).querySelector('line')
+    expect(Number(first?.getAttribute('x1'))).toBeGreaterThan(500)
+    expect(Number(first?.getAttribute('x1'))).toBeLessThan(505)
+    expect(Number(first?.getAttribute('y1'))).toBeLessThan(500)
+  })
+
+  it('tegner den 1. med lang strek innover fra fargebåndet', () => {
+    const first = ticksOf(2026).querySelector('line')
+    const length = Number(first?.getAttribute('y2')) - Number(first?.getAttribute('y1'))
+    expect(length).toBeCloseTo(26, 0)
+  })
+})

@@ -30,7 +30,14 @@ const R_LABEL = 445
 // Labels on the lower half sit a little further out, since they are drawn upside down along the arc
 const R_LABEL_FLIPPED = 462
 
-export type Point = [x: number, y: number]
+export const R_NUMBER = 388
+
+type Point = [x: number, y: number]
+
+export interface CalendarDay {
+  month: number
+  day: number
+}
 
 export const isLeapYear = (year: number) => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
 
@@ -46,6 +53,23 @@ export function dayOfYear(month: number, day: number, year: number): number {
 
 // 0 at 12 o'clock, growing clockwise
 export const angleOf = (dayIndex: number, year: number) => (dayIndex / daysInYear(year)) * 2 * Math.PI
+
+// The middle of the day, so the tick stands between the day before and the day after
+export const dayAngle = (month: number, day: number, year: number) =>
+  angleOf(dayOfYear(month, day, year) + 0.5, year)
+
+export function daysOfYear(year: number): CalendarDay[] {
+  return MONTHS.flatMap(({ number: month }) =>
+    Array.from({ length: daysInMonth(month, year) }, (_, i) => ({ month, day: i + 1 })),
+  )
+}
+
+export const hasDayNumber = (day: number) => day === 1 || day === 10 || day === 20
+
+export function tickLength(day: number): number {
+  if (day === 1) return 26
+  return hasDayNumber(day) ? 18 : 9
+}
 
 export const monthStartAngle = (month: number, year: number) => angleOf(dayOfYear(month, 1, year), year)
 

@@ -66,3 +66,7 @@ body {
 .month-label.spring { fill: var(--spring-text); }
 .month-label.summer { fill: var(--summer-text); }
 .month-label.autumn { fill: var(--autumn-text); }
+.tick { stroke: #8d948f; stroke-width: 1; }
+.tick.major { stroke: var(--text); stroke-width: 1.6; }
+.tick.first { stroke: var(--text); stroke-width: 2.4; }
+.day-num { font: 500 14px var(--sans); fill: #4a524f; text-anchor: middle; dominant-baseline: central; }
