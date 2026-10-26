@@ -1,4 +1,5 @@
 import { type MouseEvent, useState } from 'react'
+import { placeDots } from './dotPlacement.ts'
 import type { Todo } from './storage.ts'
 import {
   bandPath,
@@ -14,7 +15,6 @@ import {
   pointOnCircle,
   R_BAND,
   R_CENTRE,
-  R_DOT,
   R_NUMBER,
   R_OUTER,
   R_TODAY,
@@ -81,26 +81,24 @@ export default function Wheel({ today, todos = [] }: WheelProps) {
         </g>
         <TodayMarker today={today} />
         <Centre today={today} />
-        {todos.flatMap((todo) =>
-          todo.dates.map(({ month, day }) => {
-            const [cx, cy] = pointOnCircle(R_DOT, dayAngle(month, day, year))
-            return (
-              <g
-                key={`${todo.id}-${String(month)}-${String(day)}`}
-                className="dot"
-                data-testid="prikk"
-                onMouseEnter={(event) => {
-                  showTooltip(event, todo.title)
-                }}
-                onMouseLeave={() => {
-                  setTooltip(null)
-                }}
-              >
-                <circle className="dot-mark" cx={cx} cy={cy} r={7} />
-              </g>
-            )
-          }),
-        )}
+        {placeDots(todos, year).map(({ todo, date: { month, day }, radius }) => {
+          const [cx, cy] = pointOnCircle(radius, dayAngle(month, day, year))
+          return (
+            <g
+              key={`${todo.id}-${String(month)}-${String(day)}`}
+              className="dot"
+              data-testid="prikk"
+              onMouseEnter={(event) => {
+                showTooltip(event, todo.title)
+              }}
+              onMouseLeave={() => {
+                setTooltip(null)
+              }}
+            >
+              <circle className="dot-mark" cx={cx} cy={cy} r={7} />
+            </g>
+          )
+        })}
       </svg>
       {tooltip && (
         <div className="tooltip" role="tooltip" style={{ left: tooltip.left, top: tooltip.top }}>
