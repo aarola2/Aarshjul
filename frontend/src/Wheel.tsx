@@ -1,4 +1,5 @@
-import { type MouseEvent, useState } from 'react'
+import { type MouseEvent, useMemo, useState } from 'react'
+import { placeDots } from './dotPlacement.ts'
 import type { Todo } from './storage.ts'
 import {
   bandPath,
@@ -14,7 +15,6 @@ import {
   pointOnCircle,
   R_BAND,
   R_CENTRE,
-  R_DOT,
   R_NUMBER,
   R_OUTER,
   R_TODAY,
@@ -35,12 +35,16 @@ interface Tooltip {
 const WEEKDAYS = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag']
 const RING_RADIUS = 17
 
+const NO_TODOS: readonly Todo[] = []
+
 const labelArcId = (month: number) => `month-arc-${String(month)}`
 
-export default function Wheel({ today, todos = [] }: WheelProps) {
+export default function Wheel({ today, todos = NO_TODOS }: WheelProps) {
   const year = today.getFullYear()
   const isToday = (month: number, day: number) => month === today.getMonth() + 1 && day === today.getDate()
   const [tooltip, setTooltip] = useState<Tooltip | null>(null)
+  // Placing is only redone when the todos or the year change, not on every hover
+  const dots = useMemo(() => placeDots(todos, year), [todos, year])
 
   // The tooltip is placed above the dot, relative to the area around the wheel
   const showTooltip = (event: MouseEvent<SVGGElement>, title: string) => {
@@ -81,26 +85,24 @@ export default function Wheel({ today, todos = [] }: WheelProps) {
         </g>
         <TodayMarker today={today} />
         <Centre today={today} />
-        {todos.flatMap((todo) =>
-          todo.dates.map(({ month, day }) => {
-            const [cx, cy] = pointOnCircle(R_DOT, dayAngle(month, day, year))
-            return (
-              <g
-                key={`${todo.id}-${String(month)}-${String(day)}`}
-                className="dot"
-                data-testid="prikk"
-                onMouseEnter={(event) => {
-                  showTooltip(event, todo.title)
-                }}
-                onMouseLeave={() => {
-                  setTooltip(null)
-                }}
-              >
-                <circle className="dot-mark" cx={cx} cy={cy} r={7} />
-              </g>
-            )
-          }),
-        )}
+        {dots.map(({ todo, date: { month, day }, radius }) => {
+          const [cx, cy] = pointOnCircle(radius, dayAngle(month, day, year))
+          return (
+            <g
+              key={`${todo.id}-${String(month)}-${String(day)}`}
+              className="dot"
+              data-testid="prikk"
+              onMouseEnter={(event) => {
+                showTooltip(event, todo.title)
+              }}
+              onMouseLeave={() => {
+                setTooltip(null)
+              }}
+            >
+              <circle className="dot-mark" cx={cx} cy={cy} r={7} />
+            </g>
+          )
+        })}
       </svg>
       {tooltip && (
         <div className="tooltip" role="tooltip" style={{ left: tooltip.left, top: tooltip.top }}>
