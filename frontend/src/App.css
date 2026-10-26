@@ -1,0 +1,68 @@
+:root {
+  --bg: #f4f1ea;
+  --text: #1d2624;
+  --muted: #5d6763;
+  --surface: #fffdf8;
+  --line: #e3dccd;
+  --winter: #e3e9ef;
+  --winter-text: #2b3a48;
+  --spring: #bfdc9c;
+  --spring-text: #24401a;
+  --summer: #2e6a42;
+  --summer-text: #ffffff;
+  --autumn: #df8a3e;
+  --autumn-text: #3a1c05;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 1100px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top bar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 40px;
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: baseline; gap: 20px; }
+.brand h1 { font-family: var(--serif); font-weight: 400; font-size: 44px; margin: 0; }
+.brand p { margin: 0; color: var(--muted); font-size: 18px; }
+
+/* Two columns */
+.layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 440px; }
+.wheel-area { display: flex; align-items: center; justify-content: center; padding: 24px; min-height: 0; }
+.wheel { height: 100%; width: auto; max-width: 100%; aspect-ratio: 1 / 1; overflow: visible; }
+.month { background: var(--surface); border-left: 1px solid var(--line); padding: 40px 32px; overflow-y: auto; }
+.eyebrow { margin: 0; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600; font-size: 14px; color: var(--muted); }
+
+/* Wheel */
+.rim { fill: var(--surface); stroke: var(--line); stroke-width: 2; }
+.band { stroke: #ffffff; stroke-width: 2; }
+.band.winter { fill: var(--winter); }
+.band.spring { fill: var(--spring); }
+.band.summer { fill: var(--summer); }
+.band.autumn { fill: var(--autumn); }
+.divider { stroke: var(--line); stroke-width: 1.5; }
+.month-label { font: 600 20px var(--sans); letter-spacing: 0.18em; }
+.month-label.winter { fill: var(--winter-text); }
+.month-label.spring { fill: var(--spring-text); }
+.month-label.summer { fill: var(--summer-text); }
+.month-label.autumn { fill: var(--autumn-text); }
