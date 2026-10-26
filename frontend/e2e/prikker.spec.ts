@@ -63,7 +63,8 @@ test('prikken ligger langs linjen for sin dato', async ({ page }) => {
   const sortNumbers = (values: number[]) => [...values].sort((a, b) => a - b)
   const actual = sortNumbers(angles)
   sortNumbers(expected).forEach((angle, i) => {
-    expect(Math.abs((actual[i] ?? NaN) - angle)).toBeLessThan(1)
+    // One day is about 0.99°, so the margin must be well below that
+    expect(Math.abs((actual[i] ?? NaN) - angle)).toBeLessThan(0.2)
   })
 })
 
@@ -72,10 +73,12 @@ test('tittelen vises når musen holdes over en prikk', async ({ page }) => {
   await expect(page.getByRole('tooltip')).toBeHidden()
   await dots(page).hover()
   await expect(page.getByRole('tooltip')).toHaveText('Dekkskift')
-  // The tooltip sits just above the dot
+  // The tooltip sits just above the dot, centred on it
   const tip = await page.getByRole('tooltip').boundingBox()
   const dot = await dots(page).boundingBox()
-  expect(tip && dot && tip.y + tip.height <= dot.y).toBe(true)
+  if (!tip || !dot) throw new Error('Tooltip eller prikk er ikke synlig')
+  expect(tip.y + tip.height).toBeLessThanOrEqual(dot.y)
+  expect(Math.abs(tip.x + tip.width / 2 - (dot.x + dot.width / 2))).toBeLessThan(1)
   const shot = test.info().outputPath('tooltip.png')
   await page.screenshot({ path: shot })
   await test.info().attach('tooltip over prikken', { path: shot, contentType: 'image/png' })
