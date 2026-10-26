@@ -1,3 +1,5 @@
+import { type MouseEvent, useState } from 'react'
+import type { Todo } from './storage.ts'
 import {
   bandPath,
   type CalendarDay,
@@ -12,6 +14,7 @@ import {
   pointOnCircle,
   R_BAND,
   R_CENTRE,
+  R_DOT,
   R_NUMBER,
   R_OUTER,
   R_TODAY,
@@ -20,6 +23,13 @@ import {
 
 interface WheelProps {
   today: Date
+  todos?: readonly Todo[]
+}
+
+interface Tooltip {
+  title: string
+  left: number
+  top: number
 }
 
 const WEEKDAYS = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag']
@@ -27,36 +37,77 @@ const RING_RADIUS = 17
 
 const labelArcId = (month: number) => `month-arc-${String(month)}`
 
-export default function Wheel({ today }: WheelProps) {
+export default function Wheel({ today, todos = [] }: WheelProps) {
   const year = today.getFullYear()
   const isToday = (month: number, day: number) => month === today.getMonth() + 1 && day === today.getDate()
+  const [tooltip, setTooltip] = useState<Tooltip | null>(null)
+
+  // The tooltip is placed above the dot, relative to the area around the wheel
+  const showTooltip = (event: MouseEvent<SVGGElement>, title: string) => {
+    const area = event.currentTarget.ownerSVGElement?.parentElement?.getBoundingClientRect()
+    // Measure the dot itself, not the whole group, so a larger focus ring later does not move the tooltip
+    const dot = (event.currentTarget.querySelector('circle') ?? event.currentTarget).getBoundingClientRect()
+    setTooltip({
+      title,
+      left: dot.left + dot.width / 2 - (area?.left ?? 0),
+      top: dot.top - (area?.top ?? 0),
+    })
+  }
+
   return (
-    <svg className="wheel" viewBox="0 0 1000 1000" role="group" aria-label="Årshjul med gjøremål">
-      <defs>
-        <filter id="magnet" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx={0} dy={1.5} stdDeviation={1.5} floodOpacity={0.35} />
-        </filter>
+    <>
+      <svg className="wheel" viewBox="0 0 1000 1000" role="group" aria-label="Årshjul med gjøremål">
+        <defs>
+          <filter id="magnet" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx={0} dy={1.5} stdDeviation={1.5} floodOpacity={0.35} />
+          </filter>
+          {MONTHS.map((month) => (
+            <path key={month.number} id={labelArcId(month.number)} d={labelArcPath(month.number, year)} />
+          ))}
+        </defs>
+        <circle className="rim" cx={CENTRE} cy={CENTRE} r={R_OUTER} />
         {MONTHS.map((month) => (
-          <path key={month.number} id={labelArcId(month.number)} d={labelArcPath(month.number, year)} />
+          <MonthSegment key={month.number} month={month} year={year} />
         ))}
-      </defs>
-      <circle className="rim" cx={CENTRE} cy={CENTRE} r={R_OUTER} />
-      {MONTHS.map((month) => (
-        <MonthSegment key={month.number} month={month} year={year} />
-      ))}
-      <g data-testid="dagsstreker">
-        {daysOfYear(year).map((day) => (
-          <DayTick
-            key={`${String(day.month)}-${String(day.day)}`}
-            {...day}
-            year={year}
-            current={isToday(day.month, day.day)}
-          />
-        ))}
-      </g>
-      <TodayMarker today={today} />
-      <Centre today={today} />
-    </svg>
+        <g data-testid="dagsstreker">
+          {daysOfYear(year).map((day) => (
+            <DayTick
+              key={`${String(day.month)}-${String(day.day)}`}
+              {...day}
+              year={year}
+              current={isToday(day.month, day.day)}
+            />
+          ))}
+        </g>
+        <TodayMarker today={today} />
+        <Centre today={today} />
+        {todos.flatMap((todo) =>
+          todo.dates.map(({ month, day }) => {
+            const [cx, cy] = pointOnCircle(R_DOT, dayAngle(month, day, year))
+            return (
+              <g
+                key={`${todo.id}-${String(month)}-${String(day)}`}
+                className="dot"
+                data-testid="prikk"
+                onMouseEnter={(event) => {
+                  showTooltip(event, todo.title)
+                }}
+                onMouseLeave={() => {
+                  setTooltip(null)
+                }}
+              >
+                <circle className="dot-mark" cx={cx} cy={cy} r={7} />
+              </g>
+            )
+          }),
+        )}
+      </svg>
+      {tooltip && (
+        <div className="tooltip" role="tooltip" style={{ left: tooltip.left, top: tooltip.top }}>
+          {tooltip.title}
+        </div>
+      )}
+    </>
   )
 }
 

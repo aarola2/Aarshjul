@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import type { Todo } from './storage.ts'
 import Wheel from './Wheel.tsx'
+import { dayAngle } from './wheelGeometry.ts'
 
 const renderWheel = () => render(<Wheel today={new Date(2026, 2, 15)} />).container
 
@@ -138,5 +140,56 @@ describe('Wheel, dagens dato', () => {
     expect(screen.getByText(day, { exact: true })).toBeInTheDocument()
     expect(screen.getByText(month, { exact: true })).toBeInTheDocument()
     expect(screen.getByText(weekday, { exact: true })).toBeInTheDocument()
+  })
+})
+
+describe('Wheel, prikker', () => {
+  const todo = (id: string, title: string, ...dates: [number, number][]): Todo => ({
+    id,
+    title,
+    description: '',
+    dates: dates.map(([month, day]) => ({ month, day })),
+    createdAt: '2026-01-02T09:00:00.000Z',
+  })
+  const TODOS = [
+    todo('a1', 'Dekkskift', [4, 15], [10, 15]),
+    todo('b2', 'Vårvask av garasjen', [5, 15]),
+    todo('c3', 'Rense takrennene', [3, 20], [6, 1], [9, 1]),
+  ]
+  const renderDots = (todos: readonly Todo[]) => {
+    render(<Wheel today={new Date(2026, 9, 26)} todos={todos} />)
+    return screen.queryAllByTestId('prikk')
+  }
+  const angleOfDot = (dot: Element) => {
+    const mark = dot.querySelector('circle')
+    return Math.atan2(Number(mark?.getAttribute('cx')) - 500, 500 - Number(mark?.getAttribute('cy')))
+  }
+  const normalise = (angle: number) => (angle + 2 * Math.PI) % (2 * Math.PI)
+
+  it('tegner én prikk per dato per gjøremål', () => {
+    expect(renderDots(TODOS)).toHaveLength(6)
+  })
+
+  it('tegner ingen prikker uten gjøremål', () => {
+    expect(renderDots([])).toHaveLength(0)
+  })
+
+  it('legger hver prikk langs linjen for sin dato', () => {
+    const angles = renderDots(TODOS).map((dot) => normalise(angleOfDot(dot)))
+    const expected = TODOS.flatMap(({ dates }) => dates.map(({ month, day }) => dayAngle(month, day, 2026)))
+    expect(angles).toHaveLength(expected.length)
+    angles.forEach((angle, i) => {
+      expect(angle).toBeCloseTo(expected[i] ?? NaN, 6)
+    })
+  })
+
+  it('viser tittelen når musen holdes over en prikk, og skjuler den etterpå', () => {
+    const [dot] = renderDots([todo('a1', 'Dekkskift', [4, 15])])
+    if (!dot) throw new Error('Fant ingen prikk')
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    fireEvent.mouseEnter(dot)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Dekkskift')
+    fireEvent.mouseLeave(dot)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
 })

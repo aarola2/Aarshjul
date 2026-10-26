@@ -49,7 +49,7 @@ body {
 
 /* Two columns */
 .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 440px; }
-.wheel-area { display: flex; align-items: center; justify-content: center; padding: 24px; min-height: 0; }
+.wheel-area { position: relative; display: flex; align-items: center; justify-content: center; padding: 24px; min-height: 0; }
 .wheel { height: 100%; width: auto; max-width: 100%; aspect-ratio: 1 / 1; overflow: visible; }
 .month { background: var(--surface); border-left: 1px solid var(--line); padding: 40px 32px; overflow-y: auto; }
 .eyebrow { margin: 0; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600; font-size: 14px; color: var(--muted); }
@@ -78,3 +78,19 @@ body {
 .centre-day { font: 400 64px var(--serif); text-anchor: middle; fill: var(--text); }
 .centre-month { font: 600 22px var(--sans); text-anchor: middle; fill: var(--text); }
 .centre-weekday { font: 400 16px var(--sans); text-anchor: middle; fill: var(--muted); }
+.dot { cursor: pointer; }
+.dot-mark { r: 7px; fill: var(--text); stroke: var(--surface); stroke-width: 2; transition: r 0.12s; }
+.dot:hover .dot-mark { r: 10px; }
+.tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: var(--text);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
