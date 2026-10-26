@@ -19,9 +19,9 @@ Tatt uendret fra referansen:
 
 - Sideoppsett: toppfelt med tittel, undertekst og «+ Legg til nytt gjøremål»; hjul til venstre; sidekolonne «Denne måneden» (440 px) til høyre.
 - Hjulet: januar kl. 12, med klokken, juli nederst; fargebånd med månedsnavn langs sirkelen; én strek per dag; datotall på 1., 10. og 20.; senterfelt med dag, måned og ukedag; rød ring rundt dagens dato.
-- Alle farger: årstider, dagens dato, prikker, kort, dialog, feil og slett.
+- Farger for årstider, dagens dato, prikker, dialog, feil og slett. Kortene avviker, se under.
 - Knapper: primær (mørk fylt), sekundær (omriss), farlig (rød), stiplet «+ Legg til ekstra dato».
-- Dialogene «Vis gjøremål», skjema og «Er du sikker?», med lukking via Esc, klikk utenfor og lukkeknapp, og fokus tilbake til elementet som åpnet dem.
+- Dialogene «Vis gjøremål», skjema og «Er du sikker?». Alle lukkes med Esc, klikk utenfor og lukkeknapp (×), og fokus går tilbake til elementet som åpnet dem.
 - Feilmeldingstekstene, tomtilstanden og varselstripen for ødelagte data med «Last ned kopien» (`aarshjul-odelagte-data.json`) og «Lukk».
 
 ## Avvik og tillegg
@@ -29,15 +29,23 @@ Tatt uendret fra referansen:
 | Hva | Hvorfor |
 |---|---|
 | Systemskrift i stedet for Instrument Serif/Sans | Besluttet av eier i #4: ingen eksterne fonter eller nye pakker. |
+| Månedsnavnene på hjulet er i sans, ikke serif | Md-en sier serif, men png-en viser sans. Prototypen følger png-en. |
+| Kortene har `#f9f6ef` og sidekolonnen `#fffdf8` | Md-en sier `#fffdf8` for kort, men png-en viser kort som er litt mørkere enn sidekolonnen. Prototypen følger png-en. |
+| Prikker på nære datoer spres så de ikke overlapper, når det er plass | Brukerhistorien krever bare at prikker på samme dato aldri får samme plass. Prototypen unngår også synlig overlapp med nabodatoer. |
+| Tab går gjennom prikkene i kalenderrekkefølge, fra januar | Ikke beskrevet i referansen. |
+| Er dagens dato 1., 10. eller 20., vises tallet bare i ringen | Så tallet ikke står to ganger. |
 | Den grå prikken til venstre for «+ Legg til nytt gjøremål» er ikke med | Referansen sier at den er en rest og ikke skal bygges. |
 | Variant B er ikke med | Valgt bort i referansen. |
 | `Årshjul.dc.html` er ikke brukt | Filen som referansen nevner, finnes ikke. Bare PNG og md er grunnlag. |
 | Ringen for dagens dato ligger litt innenfor de andre datotallene, med en rød strek ut til datoen | Så ringen ikke dekker 1., 10. eller 20. når dagens dato ligger like ved. |
+| «Fjern» vises bare når det er mer enn én dato | Minst én dato er påkrevd, så den siste kan ikke fjernes. |
+| Ved 12 datoer forsvinner «+ Legg til ekstra dato», og «Maks 12 datoer per gjøremål.» vises | Referansen sier bare «maks 12». |
+| Bekreftelsen viser tittelen og «… slettes. Dette kan ikke angres.» | Referansen sier bare «Er du sikker?» med gjøremålets tittel. |
 | Datofelt med tom verdi ignoreres ved lagring | Ikke beskrevet i referansen. Bare når alle datofelt er tomme, vises «Minst én dato er påkrevd.». |
 | Feilmeldinger for lengde og format: «Tittelen kan ha maks 60 tegn.», «Beskrivelsen kan ha maks 500 tegn.», «Skriv datoen som dd.mm, for eksempel 15.05.» | Referansen gir ikke tekst for disse. |
 | I «Vis gjøremål» står «29. februar vises som 28. februar i år uten skuddår.» når det gjelder | Gjør regelen fra brukerhistorien synlig for brukeren. |
 | Kalendervelgeren er nettleserens egen datovelger | Den kan ikke velge 29. februar i år uten skuddår; da skrives datoen inn. |
-| Prototypemenyen nederst til venstre | Bare for å vise tilstander i prototypen. Bygges ikke. |
+| Prototypemenyen nederst til venstre | Bare for å vise tilstander i prototypen. Bygges ikke. Den er lukket fra start og dekker deler av hjulet når den er åpen. |
 
 ## Skjermer og tilstander
 
@@ -94,6 +102,7 @@ Hvert UI-krav i `docs/krav/aarshjul.md` og hvor det vises i prototypen. Tallene 
 | 29. februar tillatt, vises 28. februar i år uten skuddår | 15 |
 | Samme dato kan ikke legges inn to ganger | 8 |
 | «+ Legg til ekstra dato» til grensen på 12 | 5, 9 |
+| Alle gjøremål gjentas hvert år, ingen egen innstilling for gjentakelse | 4 («↻ Gjentas automatisk hvert år»), 5 (hjelpeteksten under «Datoer») |
 | Feilmelding ved feltet, ingenting lagres | 7, 8 |
 | Redigering bruker samme skjema og regler | 6 |
 | Sletting krever bekreftelse | 10 |

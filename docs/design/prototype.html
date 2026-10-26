@@ -343,10 +343,11 @@
 
 <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-text">
   <div class="dlg">
+    <button type="button" class="btn close" data-close aria-label="Lukk">×</button>
     <h2 id="confirm-title">Er du sikker?</h2>
     <p id="confirm-text"></p>
     <div class="dlg-actions">
-      <button type="button" class="btn secondary" data-close>Avbryt</button>
+      <button type="button" class="btn secondary" data-close autofocus>Avbryt</button>
       <button type="button" class="btn danger-fill" id="confirm-yes">Ja, slett</button>
     </div>
   </div>
@@ -375,6 +376,7 @@ const R_DOT_MIN = 140;
 const R_DOT_MAX = 326;
 const R_CENTER = 105;
 const DOT_SLOTS = 12;
+const MIN_DOT_GAP = 18; // centre distance; a dot is 14 wide
 
 const $ = (id) => document.getElementById(id);
 
@@ -483,7 +485,16 @@ function hash(text) {
   return h;
 }
 
-// Position along the date line is derived from the id; probing guarantees no two dots share a slot
+const dotRadius = (slot, slots) => R_DOT_MIN + ((slot + 0.5) * (R_DOT_MAX - R_DOT_MIN)) / slots;
+
+function dotDistance(a, b, y) {
+  const [ax, ay] = polar(a.radius, angleOf(a.index + 0.5, y));
+  const [bx, by] = polar(b.radius, angleOf(b.index + 0.5, y));
+  return Math.hypot(ax - bx, ay - by);
+}
+
+// Position along the date line starts from a hash of the id. Probing guarantees that two dots on the
+// same date never share a slot, and prefers a slot that does not overlap dots on nearby dates.
 function placeDots(list, y) {
   const entries = [];
   for (const todo of [...list].sort((a, b) => a.id.localeCompare(b.id))) {
@@ -492,15 +503,20 @@ function placeDots(list, y) {
   const perIndex = new Map();
   for (const e of entries) perIndex.set(e.index, (perIndex.get(e.index) ?? 0) + 1);
   const taken = new Map();
-  return entries.map((e) => {
+  const placed = [];
+  for (const e of entries) {
     const slots = Math.max(DOT_SLOTS, perIndex.get(e.index));
     const used = taken.get(e.index) ?? new Set();
     taken.set(e.index, used);
-    let slot = hash(e.todo.id) % slots;
-    while (used.has(slot)) slot = (slot + 1) % slots;
+    const start = hash(e.todo.id) % slots;
+    const free = Array.from({ length: slots }, (_, k) => (start + k) % slots).filter((s) => !used.has(s));
+    const clear = (s) => placed.every((p) => dotDistance(p, { index: e.index, radius: dotRadius(s, slots) }, y) >= MIN_DOT_GAP);
+    const slot = free.find(clear) ?? free[0];
     used.add(slot);
-    return { ...e, radius: R_DOT_MIN + ((slot + 0.5) * (R_DOT_MAX - R_DOT_MIN)) / slots };
-  });
+    placed.push({ ...e, radius: dotRadius(slot, slots) });
+  }
+  // Tab order follows the calendar
+  return placed.sort((a, b) => a.index - b.index || a.radius - b.radius);
 }
 
 function arc(r, a0, a1, clockwise) {
@@ -544,7 +560,7 @@ function drawDay(root, month, day, y) {
   const [x1, y1] = polar(current ? R_TODAY + 17 : R_BAND - length, angle);
   const kind = current ? 'today' : day === 1 ? 'first' : major ? 'major' : '';
   root.append(svg('line', { class: `tick ${kind}`, x1: x0, y1: y0, x2: x1, y2: y1 }));
-  if (major) {
+  if (major && !current) {
     const [nx, ny] = polar(R_NUM, angle);
     root.append(svg('text', { class: 'day-num', x: nx, y: ny, 'aria-hidden': 'true' }, String(day)));
   }
