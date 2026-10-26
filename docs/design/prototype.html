@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Årshjul – klikkbar prototype</title>
+<!--
+  Klikkbar prototype for issue #4. Bygger på docs/design/referanse/ (variant A).
+  Selvstendig fil: ingen eksterne skript eller fonter, ingen nettleserlagring.
+  Data er eksempeldata i minnet og forsvinner ved ny innlasting.
+  Se docs/design/wireframe.md for tilstander og sporing mot brukerhistorien.
+-->
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --text: #1d2624;
+    --muted: #5d6763;
+    --surface: #fffdf8;
+    --card: #f9f6ef;
+    --line: #e3dccd;
+    --line-strong: #9b917c;
+    --red: #c4302b;
+    --error: #b3261e;
+    --danger: #a52520;
+    --alert-bg: #fbe9e6;
+    --winter: #e3e9ef;
+    --winter-text: #2b3a48;
+    --spring: #bfdc9c;
+    --spring-text: #24401a;
+    --summer: #2e6a42;
+    --summer-text: #ffffff;
+    --autumn: #df8a3e;
+    --autumn-text: #3a1c05;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-width: 1100px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+  }
+
+  /* Toppfelt */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 40px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: baseline; gap: 20px; }
+  .brand h1 { font-family: var(--serif); font-weight: 400; font-size: 44px; margin: 0; }
+  .brand p { margin: 0; color: var(--muted); font-size: 18px; }
+
+  /* Varsel om ødelagte data */
+  .alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 14px 40px;
+    background: var(--alert-bg);
+    border-bottom: 1px solid #efc4bd;
+    color: #5a1612;
+  }
+  .alert p { margin: 0; line-height: 1.45; }
+  .alert-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* To kolonner */
+  .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 440px; }
+  .wheel-area { position: relative; display: flex; align-items: center; justify-content: center; padding: 24px; min-height: 0; }
+  #wheel { height: 100%; width: auto; max-width: 100%; aspect-ratio: 1 / 1; overflow: visible; }
+  .month { background: var(--surface); border-left: 1px solid var(--line); padding: 40px 32px; overflow-y: auto; }
+
+  /* Hjulet */
+  .rim { fill: var(--surface); stroke: var(--line); stroke-width: 2; }
+  .face { fill: var(--surface); }
+  .band { stroke: #ffffff; stroke-width: 2; }
+  .band.winter { fill: var(--winter); }
+  .band.spring { fill: var(--spring); }
+  .band.summer { fill: var(--summer); }
+  .band.autumn { fill: var(--autumn); }
+  .month-label { font: 600 20px var(--sans); letter-spacing: 0.18em; }
+  .month-label.winter { fill: var(--winter-text); }
+  .month-label.spring { fill: var(--spring-text); }
+  .month-label.summer { fill: var(--summer-text); }
+  .month-label.autumn { fill: var(--autumn-text); }
+  .divider { stroke: var(--line); stroke-width: 1.5; }
+  .tick { stroke: #8d948f; stroke-width: 1; }
+  .tick.major { stroke: var(--text); stroke-width: 1.6; }
+  .tick.first { stroke: var(--text); stroke-width: 2.4; }
+  .tick.today { stroke: var(--red); stroke-width: 2.4; }
+  .day-num { font: 500 14px var(--sans); fill: #4a524f; text-anchor: middle; dominant-baseline: central; }
+  .day-num.today { font-weight: 700; fill: var(--text); }
+  .today-ring { fill: #ffffff; stroke: var(--red); stroke-width: 3.5; filter: url(#magnet); }
+  .center { fill: #f1ede4; }
+  .center-day { font: 400 64px var(--serif); text-anchor: middle; fill: var(--text); }
+  .center-month { font: 600 22px var(--sans); text-anchor: middle; fill: var(--text); }
+  .center-weekday { font: 400 16px var(--sans); text-anchor: middle; fill: var(--muted); }
+  .dot { cursor: pointer; outline: none; }
+  .dot-mark { r: 7px; fill: var(--text); stroke: var(--surface); stroke-width: 2; transition: r 0.12s; }
+  .dot:hover .dot-mark, .dot:focus-visible .dot-mark { r: 10px; }
+  .dot-focus { fill: none; stroke: none; }
+  .dot:focus-visible .dot-focus { stroke: var(--text); stroke-width: 2.5; }
+
+  .tooltip {
+    position: absolute;
+    transform: translate(-50%, calc(-100% - 10px));
+    background: var(--text);
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Sidekolonne */
+  .eyebrow { margin: 0; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600; font-size: 14px; color: var(--muted); }
+  #month-title { font-family: var(--serif); font-weight: 400; font-size: 56px; margin: 4px 0 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: border-color 0.12s;
+  }
+  .card:hover { border-color: var(--line-strong); }
+  .card h3 { margin: 12px 0 6px; font-size: 21px; overflow-wrap: anywhere; }
+  .card-title { all: unset; cursor: pointer; }
+  .desc { margin: 0 0 14px; color: #3b4542; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+  .actions { display: flex; gap: 12px; align-items: center; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge { border-radius: 999px; padding: 4px 12px; font-weight: 600; font-size: 14px; border: 2px solid transparent; }
+  .badge.winter { background: var(--winter); color: var(--winter-text); }
+  .badge.spring { background: var(--spring); color: var(--spring-text); }
+  .badge.summer { background: var(--summer); color: var(--summer-text); }
+  .badge.autumn { background: var(--autumn); color: var(--autumn-text); }
+  .badge.today { border-color: var(--red); }
+  .empty { border: 2px dashed var(--line); border-radius: 16px; padding: 28px; text-align: center; color: var(--muted); }
+  .empty p { margin: 0; }
+  .empty strong { display: block; color: var(--text); font-size: 18px; margin-bottom: 6px; }
+
+  /* Knapper */
+  .btn {
+    font: 600 16px var(--sans);
+    border-radius: 999px;
+    padding: 10px 20px;
+    border: 2px solid transparent;
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .btn.primary { background: var(--text); color: #ffffff; }
+  .btn.secondary { border-color: var(--text); }
+  .btn.danger-text { color: var(--danger); }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.danger-fill { background: var(--red); color: #ffffff; }
+  .btn.dashed { border: 2px dashed #9aa19d; }
+  .btn.link { padding: 6px 10px; text-decoration: underline; }
+  .btn.icon { padding: 8px 10px; border-color: #cfc6b4; border-width: 1.5px; border-radius: 10px; line-height: 0; }
+  .btn:focus-visible, .card-title:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible {
+    outline: 3px solid var(--text);
+    outline-offset: 2px;
+  }
+
+  /* Dialoger */
+  dialog {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 0;
+    width: min(560px, 92vw);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  }
+  dialog::backdrop { background: rgba(20, 26, 24, 0.55); }
+  .dlg { position: relative; padding: 28px 32px; }
+  .dlg h2 { font-family: var(--serif); font-weight: 400; font-size: 34px; margin: 0 48px 14px 0; overflow-wrap: anywhere; }
+  .dlg .desc { margin-top: 16px; }
+  .close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; padding: 0; font-size: 26px; line-height: 1; }
+  .repeat { color: var(--muted); font-size: 14px; margin: 16px 0 0; }
+  .dlg-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+
+  /* Skjema */
+  .field { margin: 0 0 18px; }
+  .label-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .label-row label, fieldset legend { font-weight: 600; }
+  .optional { font-weight: 400; color: var(--muted); }
+  .counter { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .counter.over { color: var(--error); font-weight: 600; }
+  input[type="text"], textarea {
+    width: 100%;
+    font: inherit;
+    padding: 10px 12px;
+    border: 1.5px solid #cfc6b4;
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--text);
+  }
+  textarea { resize: vertical; }
+  [aria-invalid="true"] { border-color: var(--error) !important; }
+  .field-error { color: var(--error); margin: 6px 0 0; font-size: 14px; font-weight: 600; }
+  .field-error:empty { display: none; }
+  fieldset { border: 0; padding: 0; min-width: 0; }
+  fieldset legend { padding: 0; margin-bottom: 6px; }
+  .hint { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+  .date-list { list-style: none; padding: 0; margin: 0 0 10px; }
+  .date-row { margin-bottom: 8px; }
+  .date-line { position: relative; display: flex; gap: 8px; align-items: center; }
+  .date-line input[type="text"] { width: 120px; }
+  .picker { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+  /* Prototypemeny – bare i prototypen */
+  .proto-menu {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 5;
+    width: 250px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border: 2px dashed #b08a2e;
+    border-radius: 12px;
+    font-size: 14px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  }
+  .proto-menu summary { font-weight: 700; cursor: pointer; }
+  .proto-menu p { margin: 8px 0; color: var(--muted); }
+  .proto-menu button {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px 10px;
+    text-align: left;
+    font: inherit;
+    background: #fbf6e9;
+    border: 1px solid #e2d3a8;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>Årshjul</h1>
+    <p>Faste gjøremål som kommer igjen hvert år</p>
+  </div>
+  <button type="button" class="btn primary" id="add-btn">+ Legg til nytt gjøremål</button>
+</header>
+
+<div id="alert-slot"></div>
+
+<main class="layout">
+  <section class="wheel-area" aria-label="Årshjul">
+    <svg id="wheel" viewBox="0 0 1000 1000" role="group" aria-label="Årshjul med gjøremål"></svg>
+    <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  </section>
+  <aside class="month" aria-labelledby="month-title">
+    <p class="eyebrow">Denne måneden</p>
+    <h2 id="month-title"></h2>
+    <div id="cards"></div>
+  </aside>
+</main>
+
+<details class="proto-menu">
+  <summary>Prototype: tilstander</summary>
+  <p>Bare i prototypen, bygges ikke. Alt annet er klikkbart som i appen.</p>
+  <button type="button" data-state="sample">Eksempeldata</button>
+  <button type="button" data-state="empty-month">Tom måned</button>
+  <button type="button" data-state="empty-all">Helt tom liste</button>
+  <button type="button" data-state="corrupt">Ødelagte data</button>
+  <button type="button" data-state="form-required">Skjema: påkrevde felt mangler</button>
+  <button type="button" data-state="form-invalid">Skjema: ugyldige verdier</button>
+  <button type="button" data-state="form-full">Skjema: 12 datoer</button>
+  <button type="button" data-state="next-day">Simuler midnatt (neste dag)</button>
+  <button type="button" data-state="real-today">Tilbake til i dag</button>
+</details>
+
+<dialog id="view-dialog" aria-labelledby="view-title">
+  <div class="dlg">
+    <button type="button" class="btn close" data-close aria-label="Lukk">×</button>
+    <h2 id="view-title"></h2>
+    <div class="badges" id="view-badges"></div>
+    <p class="desc" id="view-desc"></p>
+    <p class="hint" id="view-leap" hidden>29. februar vises som 28. februar i år uten skuddår.</p>
+    <p class="repeat">↻ Gjentas automatisk hvert år</p>
+    <div class="dlg-actions">
+      <button type="button" class="btn danger" id="view-delete">Slett</button>
+      <button type="button" class="btn primary" id="view-edit">Rediger</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="form-dialog" aria-labelledby="form-heading">
+  <form class="dlg" id="todo-form" novalidate>
+    <button type="button" class="btn close" data-close aria-label="Lukk">×</button>
+    <h2 id="form-heading">Nytt gjøremål</h2>
+    <div class="field">
+      <div class="label-row">
+        <label for="f-title">Tittel</label>
+        <span class="counter" id="title-count">0/60</span>
+      </div>
+      <input id="f-title" type="text" autocomplete="off" autofocus aria-describedby="title-count title-err">
+      <p class="field-error" id="title-err"></p>
+    </div>
+    <div class="field">
+      <div class="label-row">
+        <label for="f-desc">Beskrivelse <span class="optional">(valgfri)</span></label>
+        <span class="counter" id="desc-count">0/500</span>
+      </div>
+      <textarea id="f-desc" rows="4" aria-describedby="desc-count desc-err"></textarea>
+      <p class="field-error" id="desc-err"></p>
+    </div>
+    <fieldset class="field" aria-describedby="date-hint dates-err">
+      <legend>Datoer</legend>
+      <p class="hint" id="date-hint">Skriv dd.mm (eller dd/mm, dd-mm), eller velg i kalenderen. Gjentas hvert år.</p>
+      <ol class="date-list" id="date-list"></ol>
+      <p class="field-error" id="dates-err"></p>
+      <button type="button" class="btn dashed" id="add-date">+ Legg til ekstra dato</button>
+      <p class="hint" id="max-note" hidden>Maks 12 datoer per gjøremål.</p>
+    </fieldset>
+    <div class="dlg-actions">
+      <button type="button" class="btn secondary" data-close>Avbryt</button>
+      <button type="submit" class="btn primary">Lagre</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+  <div class="dlg">
+    <button type="button" class="btn close" data-close aria-label="Lukk">×</button>
+    <h2 id="confirm-title">Er du sikker?</h2>
+    <p id="confirm-text"></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn secondary" data-close autofocus>Avbryt</button>
+      <button type="button" class="btn danger-fill" id="confirm-yes">Ja, slett</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+const SHORT = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+const WEEKDAYS = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
+const SEASONS = ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'autumn', 'autumn', 'autumn', 'winter'];
+const MAX_TITLE = 60;
+const MAX_DESC = 500;
+const MAX_DATES = 12;
+const DATE_FORMAT_ERROR = 'Skriv datoen som dd.mm, for eksempel 15.05.';
+
+// Wheel geometry (viewBox 0 0 1000 1000)
+const C = 500;
+const R_OUTER = 480;
+const R_BAND = 425;
+const R_NUM = 388;
+const R_TODAY = 356;
+const R_DOT_MIN = 140;
+const R_DOT_MAX = 326;
+const R_CENTER = 105;
+const DOT_SLOTS = 12;
+const MIN_DOT_GAP = 18; // centre distance; a dot is 14 wide
+
+const $ = (id) => document.getElementById(id);
+
+let today = new Date();
+let todos = [];
+let corruptCopy = null;
+let editingId = null;
+let deletingId = null;
+let viewingId = null;
+let formDates = [];
+let submitted = false;
+
+// ---------- DOM helpers (textContent only, never innerHTML) ----------
+
+function setAttrs(node, attrs) {
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
+    else if (value === true) node.setAttribute(key, '');
+    else if (value !== false && value != null) node.setAttribute(key, String(value));
+  }
+}
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  setAttrs(node, attrs);
+  node.append(...children);
+  return node;
+}
+
+function svg(tag, attrs = {}, ...children) {
+  const node = document.createElementNS(SVG_NS, tag);
+  setAttrs(node, attrs);
+  node.append(...children);
+  return node;
+}
+
+// ---------- Dates ----------
+
+const isLeap = (y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+const daysInMonth = (month, y) => new Date(y, month, 0).getDate();
+const yearLength = (y) => (isLeap(y) ? 366 : 365);
+const year = () => today.getFullYear();
+const currentMonth = () => today.getMonth() + 1;
+const pad = (n) => String(n).padStart(2, '0');
+const byDate = (a, b) => a.month - b.month || a.day - b.day;
+
+// 29 February is shown on 28 February in years without a leap day
+function shownDay(date, y) {
+  return date.month === 2 && date.day === 29 && !isLeap(y) ? 28 : date.day;
+}
+
+function dayIndex(month, day, y) {
+  let index = day - 1;
+  for (let m = 1; m < month; m++) index += daysInMonth(m, y);
+  return index;
+}
+
+const angleOf = (index, y) => (index / yearLength(y)) * 2 * Math.PI;
+
+function polar(r, angle) {
+  return [C + r * Math.sin(angle), C - r * Math.cos(angle)];
+}
+
+const isToday = (date) => date.month === currentMonth() && shownDay(date, year()) === today.getDate();
+const shortDate = (date) => `${shownDay(date, year())}. ${SHORT[date.month - 1]}`;
+const longDate = (date) => `${shownDay(date, year())}. ${MONTHS[date.month - 1]}`;
+const hasHiddenLeapDay = (todo) => !isLeap(year()) && todo.dates.some((d) => d.month === 2 && d.day === 29);
+
+// ---------- Sample data ----------
+
+function sampleTodos() {
+  const t = (id, title, description, ...dates) => ({
+    id,
+    title,
+    description,
+    dates: dates.map(([month, day]) => ({ month, day })),
+    createdAt: '2026-01-02T09:00:00.000Z',
+  });
+  return [
+    t('q4m8', 'Sjekke brannslukkeren', 'Se at manometeret står på grønt og at plomberingen er hel.', [10, 1]),
+    t('b7x2', 'Dekkskift', 'Vinterdekk på i oktober, sommerdekk i april. Bestill time i god tid.', [10, 15], [4, 15]),
+    t('h3k9', 'Betale kommunale avgifter', 'Fakturaen kommer på e-post.', [1, 20], [4, 20], [7, 20], [10, 20]),
+    t('n2c5', 'Sette inn hagemøblene', '', [10, 15]),
+    t('z8r1', 'Sjekke frostvæske i bilen', 'Før første kuldegrad.', [10, 15]),
+    t('k5a1', 'Avtale feiing av pipa', 'Ring feieren før fyringssesongen.', [currentMonth(), today.getDate()]),
+    t('v5t6', 'Vårvask av garasjen', 'Feie, spyle gulvet og rydde hyllene.', [5, 15]),
+    t('p1d4', 'Bytte batteri i røykvarslerne', '', [12, 1], [6, 1]),
+    t('w6e3', 'Rense filteret i varmepumpa', 'Støvsug filteret og tørk av innedelen.', [3, 10], [11, 10]),
+    t('c9u7', 'Rense takrennene', 'Før og etter at løvet har falt.', [10, 5], [10, 25], [5, 10]),
+    t('f4g8', 'Beise terrassen', 'Bare når det er meldt tørt i tre dager.', [6, 20]),
+    t('j2s5', 'Sjekke skattemeldingen', 'Fristen er 30. april.', [3, 20]),
+    t('m8l2', 'Skuddårsdugnad', 'Lagt inn på 29. februar.', [2, 29]),
+    t('g1o3', 'Gå gjennom forsikringene', '', [1, 5]),
+    t('y7i4', 'Rydde boden', 'Kast det som ikke er brukt på et år.', [8, 10]),
+  ];
+}
+
+// ---------- Wheel ----------
+
+function hash(text) {
+  let h = 0x811c9dc5;
+  for (const ch of text) {
+    h ^= ch.codePointAt(0);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+const dotRadius = (slot, slots) => R_DOT_MIN + ((slot + 0.5) * (R_DOT_MAX - R_DOT_MIN)) / slots;
+
+function dotDistance(a, b, y) {
+  const [ax, ay] = polar(a.radius, angleOf(a.index + 0.5, y));
+  const [bx, by] = polar(b.radius, angleOf(b.index + 0.5, y));
+  return Math.hypot(ax - bx, ay - by);
+}
+
+// Position along the date line starts from a hash of the id. Probing guarantees that two dots on the
+// same date never share a slot, and prefers a slot that does not overlap dots on nearby dates.
+function placeDots(list, y) {
+  const entries = [];
+  for (const todo of [...list].sort((a, b) => a.id.localeCompare(b.id))) {
+    for (const date of todo.dates) entries.push({ todo, date, index: dayIndex(date.month, shownDay(date, y), y) });
+  }
+  const perIndex = new Map();
+  for (const e of entries) perIndex.set(e.index, (perIndex.get(e.index) ?? 0) + 1);
+  const taken = new Map();
+  const placed = [];
+  for (const e of entries) {
+    const slots = Math.max(DOT_SLOTS, perIndex.get(e.index));
+    const used = taken.get(e.index) ?? new Set();
+    taken.set(e.index, used);
+    const start = hash(e.todo.id) % slots;
+    const free = Array.from({ length: slots }, (_, k) => (start + k) % slots).filter((s) => !used.has(s));
+    const clear = (s) => placed.every((p) => dotDistance(p, { index: e.index, radius: dotRadius(s, slots) }, y) >= MIN_DOT_GAP);
+    const slot = free.find(clear) ?? free[0];
+    used.add(slot);
+    placed.push({ ...e, radius: dotRadius(slot, slots) });
+  }
+  // Tab order follows the calendar
+  return placed.sort((a, b) => a.index - b.index || a.radius - b.radius);
+}
+
+function arc(r, a0, a1, clockwise) {
+  const [x0, y0] = polar(r, clockwise ? a0 : a1);
+  const [x1, y1] = polar(r, clockwise ? a1 : a0);
+  return `M ${x0} ${y0} A ${r} ${r} 0 0 ${clockwise ? 1 : 0} ${x1} ${y1}`;
+}
+
+function drawMonth(root, defs, month, y) {
+  const start = dayIndex(month, 1, y);
+  const a0 = angleOf(start, y);
+  const a1 = angleOf(start + daysInMonth(month, y), y);
+  const season = SEASONS[month - 1];
+  const [ox0, oy0] = polar(R_OUTER, a0);
+  const [ox1, oy1] = polar(R_OUTER, a1);
+  const [ix1, iy1] = polar(R_BAND, a1);
+  const [ix0, iy0] = polar(R_BAND, a0);
+  root.append(svg('path', {
+    class: `band ${season}`,
+    d: `M ${ox0} ${oy0} A ${R_OUTER} ${R_OUTER} 0 0 1 ${ox1} ${oy1} L ${ix1} ${iy1} A ${R_BAND} ${R_BAND} 0 0 0 ${ix0} ${iy0} Z`,
+  }));
+  const [dx0, dy0] = polar(R_CENTER, a0);
+  const [dx1, dy1] = polar(R_BAND, a0);
+  root.append(svg('line', { class: 'divider', x1: dx0, y1: dy0, x2: dx1, y2: dy1 }));
+
+  // Lower half is drawn counter-clockwise so the month name stays upright
+  const mid = (a0 + a1) / 2;
+  const flip = mid > Math.PI / 2 && mid < (3 * Math.PI) / 2;
+  const pathId = `month-arc-${month}`;
+  defs.append(svg('path', { id: pathId, d: arc(flip ? 462 : 445, a0, a1, !flip) }));
+  root.append(svg('text', { class: `month-label ${season}`, 'aria-hidden': 'true' },
+    svg('textPath', { href: `#${pathId}`, startOffset: '50%', 'text-anchor': 'middle' }, MONTHS[month - 1].toUpperCase())));
+}
+
+function drawDay(root, month, day, y) {
+  const angle = angleOf(dayIndex(month, day, y) + 0.5, y);
+  const major = day === 1 || day === 10 || day === 20;
+  const current = month === currentMonth() && day === today.getDate();
+  const length = day === 1 ? 26 : major ? 18 : 9;
+  const [x0, y0] = polar(R_BAND, angle);
+  const [x1, y1] = polar(current ? R_TODAY + 17 : R_BAND - length, angle);
+  const kind = current ? 'today' : day === 1 ? 'first' : major ? 'major' : '';
+  root.append(svg('line', { class: `tick ${kind}`, x1: x0, y1: y0, x2: x1, y2: y1 }));
+  if (major && !current) {
+    const [nx, ny] = polar(R_NUM, angle);
+    root.append(svg('text', { class: 'day-num', x: nx, y: ny, 'aria-hidden': 'true' }, String(day)));
+  }
+}
+
+function drawToday(root, y) {
+  const angle = angleOf(dayIndex(currentMonth(), today.getDate(), y) + 0.5, y);
+  const [x, yy] = polar(R_TODAY, angle);
+  root.append(svg('circle', { class: 'today-ring', cx: x, cy: yy, r: 17 }));
+  root.append(svg('text', { class: 'day-num today', x, y: yy, 'aria-hidden': 'true' }, String(today.getDate())));
+  root.append(svg('circle', { class: 'center', cx: C, cy: C, r: R_CENTER }));
+  root.append(svg('text', { class: 'center-day', x: C, y: C - 6 }, `${today.getDate()}.`));
+  root.append(svg('text', { class: 'center-month', x: C, y: C + 34 }, MONTHS[today.getMonth()]));
+  root.append(svg('text', { class: 'center-weekday', x: C, y: C + 60 }, WEEKDAYS[today.getDay()]));
+}
+
+function drawDot(root, { todo, date, index, radius }, y) {
+  const [cx, cy] = polar(radius, angleOf(index + 0.5, y));
+  const dot = svg('g', {
+    class: 'dot',
+    tabindex: 0,
+    role: 'button',
+    'aria-label': `${todo.title}, ${longDate(date)}`,
+    'data-focus-key': `dot:${todo.id}:${date.month}-${date.day}`,
+    onclick: () => openView(todo.id, dot),
+    onkeydown: (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openView(todo.id, dot);
+      }
+    },
+    onmouseenter: () => showTip(dot, todo.title),
+    onmouseleave: hideTip,
+    onfocus: () => showTip(dot, todo.title),
+    onblur: hideTip,
+  },
+  svg('circle', { class: 'dot-focus', cx, cy, r: 15 }),
+  svg('circle', { class: 'dot-mark', cx, cy, r: 7 }));
+  root.append(dot);
+}
+
+function renderWheel() {
+  const root = $('wheel');
+  const y = year();
+  const defs = svg('defs', {},
+    svg('filter', { id: 'magnet', x: '-50%', y: '-50%', width: '200%', height: '200%' },
+      svg('feDropShadow', { dx: 0, dy: 1.5, stdDeviation: 1.5, 'flood-opacity': 0.35 })));
+  root.replaceChildren(defs);
+  root.append(svg('circle', { class: 'rim', cx: C, cy: C, r: R_OUTER }));
+  for (let m = 1; m <= 12; m++) drawMonth(root, defs, m, y);
+  for (let m = 1; m <= 12; m++) {
+    for (let d = 1; d <= daysInMonth(m, y); d++) drawDay(root, m, d, y);
+  }
+  drawToday(root, y);
+  for (const placed of placeDots(todos, y)) drawDot(root, placed, y);
+  hideTip();
+}
+
+function showTip(dot, text) {
+  const tip = $('tooltip');
+  const area = dot.closest('.wheel-area').getBoundingClientRect();
+  const mark = dot.querySelector('.dot-mark').getBoundingClientRect();
+  tip.textContent = text;
+  tip.style.left = `${mark.left + mark.width / 2 - area.left}px`;
+  tip.style.top = `${mark.top - area.top}px`;
+  tip.hidden = false;
+}
+
+function hideTip() {
+  $('tooltip').hidden = true;
+}
+
+// ---------- Side column ----------
+
+function badge(date) {
+  const current = isToday(date);
+  return el('span', { class: `badge ${SEASONS[date.month - 1]}${current ? ' today' : ''}` },
+    current ? `I dag · ${shortDate(date)}` : shortDate(date));
+}
+
+function card({ todo, dates }) {
+  const open = el('button', {
+    type: 'button',
+    class: 'card-title',
+    'data-focus-key': `card:${todo.id}`,
+    onclick: (e) => {
+      e.stopPropagation();
+      openView(todo.id, open);
+    },
+  }, todo.title);
+  return el('article', { class: 'card', onclick: (e) => { if (!e.target.closest('button')) openView(todo.id, open); } },
+    el('div', { class: 'badges' }, ...dates.map(badge)),
+    el('h3', {}, open),
+    todo.description ? el('p', { class: 'desc' }, todo.description) : '',
+    el('div', { class: 'actions' },
+      el('button', {
+        type: 'button',
+        class: 'btn secondary',
+        'aria-label': `Rediger «${todo.title}»`,
+        'data-focus-key': `edit:${todo.id}`,
+        onclick: (e) => openForm(todo.id, e.currentTarget),
+      }, 'Rediger'),
+      el('button', {
+        type: 'button',
+        class: 'btn danger-text',
+        'aria-label': `Slett «${todo.title}»`,
+        onclick: (e) => openConfirm(todo.id, e.currentTarget),
+      }, 'Slett')));
+}
+
+function renderMonth() {
+  const month = currentMonth();
+  const y = year();
+  const name = MONTHS[month - 1];
+  $('month-title').textContent = name[0].toUpperCase() + name.slice(1);
+  const items = todos
+    .map((todo) => ({
+      todo,
+      dates: todo.dates.filter((d) => d.month === month).sort((a, b) => shownDay(a, y) - shownDay(b, y)),
+    }))
+    .filter((item) => item.dates.length > 0)
+    .sort((a, b) => shownDay(a.dates[0], y) - shownDay(b.dates[0], y));
+  $('cards').replaceChildren(...(items.length > 0
+    ? items.map(card)
+    : [el('div', { class: 'empty' },
+      el('p', {}, el('strong', {}, 'Ingen oppgaver denne måneden'), `Gjøremål med en dato i ${name} dukker opp her.`))]));
+}
+
+// ---------- Corrupted data ----------
+
+function renderAlert() {
+  $('alert-slot').replaceChildren(corruptCopy === null ? '' : el('div', { class: 'alert', role: 'alert' },
+    el('p', {},
+      el('strong', {}, 'Lagrede data var ødelagt.'),
+      ' De kunne ikke leses, så årshjulet startet med en tom liste. En kopi av de ødelagte dataene er tatt vare på.'),
+    el('div', { class: 'alert-actions' },
+      el('button', { type: 'button', class: 'btn secondary', onclick: downloadCopy }, 'Last ned kopien'),
+      el('button', { type: 'button', class: 'btn link', onclick: () => { corruptCopy = null; renderAlert(); } }, 'Lukk'))));
+}
+
+function downloadCopy() {
+  const url = URL.createObjectURL(new Blob([corruptCopy], { type: 'application/json' }));
+  const link = el('a', { href: url, download: 'aarshjul-odelagte-data.json' });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ---------- Dialogs ----------
+
+const openers = new Map();
+
+function openDialog(dialog, opener) {
+  openers.set(dialog, opener ?? document.activeElement);
+  dialog.showModal();
+}
+
+// Close one dialog and pass its opener on to the next one
+function handOver(dialog) {
+  const opener = openers.get(dialog);
+  openers.set(dialog, null);
+  dialog.close();
+  return opener;
+}
+
+function restoreFocus(opener) {
+  if (!opener) return;
+  if (opener.isConnected) {
+    opener.focus();
+    return;
+  }
+  const key = opener.getAttribute('data-focus-key');
+  const again = key ? document.querySelector(`[data-focus-key="${CSS.escape(key)}"]`) : null;
+  (again ?? $('add-btn')).focus();
+}
+
+const findTodo = (id) => todos.find((t) => t.id === id);
+
+function openView(id, opener) {
+  const todo = findTodo(id);
+  viewingId = id;
+  $('view-title').textContent = todo.title;
+  $('view-badges').replaceChildren(...[...todo.dates].sort(byDate).map(badge));
+  $('view-desc').textContent = todo.description;
+  $('view-desc').hidden = !todo.description;
+  $('view-leap').hidden = !hasHiddenLeapDay(todo);
+  openDialog($('view-dialog'), opener);
+}
+
+function openConfirm(id, opener) {
+  deletingId = id;
+  $('confirm-text').textContent = `«${findTodo(id).title}» slettes. Dette kan ikke angres.`;
+  openDialog($('confirm-dialog'), opener);
+}
+
+// ---------- Form ----------
+
+function parseDate(text) {
+  const match = /^\s*(\d{1,2})\s*[./-]\s*(\d{1,2})\s*\.?\s*$/.exec(text);
+  if (!match) return { error: DATE_FORMAT_ERROR };
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12 || day < 1) return { error: DATE_FORMAT_ERROR };
+  // 2024 is a leap year, so 29 February is allowed
+  if (day > daysInMonth(month, 2024)) return { error: `${day}. ${MONTHS[month - 1]} finnes ikke i kalenderen.` };
+  return { date: { month, day } };
+}
+
+function validate() {
+  const title = $('f-title').value.trim();
+  const description = $('f-desc').value.trim();
+  const errors = { title: '', description: '', dates: formDates.map(() => ''), group: '' };
+  if (!title) errors.title = 'Tittel er påkrevd.';
+  else if (title.length > MAX_TITLE) errors.title = `Tittelen kan ha maks ${MAX_TITLE} tegn.`;
+  if (description.length > MAX_DESC) errors.description = `Beskrivelsen kan ha maks ${MAX_DESC} tegn.`;
+  const seen = new Set();
+  const dates = [];
+  formDates.forEach((text, i) => {
+    if (!text.trim()) return;
+    const parsed = parseDate(text);
+    if (parsed.error) {
+      errors.dates[i] = parsed.error;
+      return;
+    }
+    const key = `${parsed.date.month}-${parsed.date.day}`;
+    if (seen.has(key)) {
+      errors.dates[i] = `${longDateRaw(parsed.date)} er allerede lagt inn på dette gjøremålet.`;
+      return;
+    }
+    seen.add(key);
+    dates.push(parsed.date);
+  });
+  if (!formDates.some((text) => text.trim())) errors.group = 'Minst én dato er påkrevd.';
+  const ok = !errors.title && !errors.description && !errors.group && errors.dates.every((e) => !e);
+  return { ok, errors, title, description, dates };
+}
+
+const longDateRaw = (date) => `${date.day}. ${MONTHS[date.month - 1]}`;
+
+function setError(input, errorEl, message) {
+  errorEl.textContent = message;
+  if (input) input.setAttribute('aria-invalid', message ? 'true' : 'false');
+}
+
+function showErrors(errors) {
+  setError($('f-title'), $('title-err'), errors.title);
+  setError($('f-desc'), $('desc-err'), errors.description);
+  setError(null, $('dates-err'), errors.group);
+  $('date-list').querySelectorAll('.date-row').forEach((row, i) => {
+    setError(row.querySelector('input[type="text"]'), row.querySelector('.field-error'), errors.dates[i] ?? '');
+  });
+}
+
+function updateCounters() {
+  for (const [input, counter, max] of [[$('f-title'), $('title-count'), MAX_TITLE], [$('f-desc'), $('desc-count'), MAX_DESC]]) {
+    const length = input.value.trim().length;
+    counter.textContent = `${length}/${max}`;
+    counter.classList.toggle('over', length > max);
+  }
+}
+
+function revalidate() {
+  updateCounters();
+  if (submitted) showErrors(validate().errors);
+}
+
+function calendarIcon() {
+  return svg('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'aria-hidden': 'true' },
+    svg('rect', { x: 3, y: 5, width: 18, height: 16, rx: 2 }),
+    svg('path', { d: 'M3 10h18M8 3v4M16 3v4' }));
+}
+
+function toIso(text) {
+  const parsed = parseDate(text);
+  if (parsed.error || shownDay(parsed.date, year()) !== parsed.date.day) return '';
+  return `${year()}-${pad(parsed.date.month)}-${pad(parsed.date.day)}`;
+}
+
+function dateRow(value, i) {
+  const n = i + 1;
+  const errorId = `date-err-${i}`;
+  const input = el('input', {
+    type: 'text',
+    inputmode: 'numeric',
+    placeholder: 'dd.mm',
+    value,
+    'aria-label': `Dato ${n}`,
+    'aria-describedby': errorId,
+    oninput: (e) => {
+      formDates[i] = e.target.value;
+      revalidate();
+    },
+  });
+  const picker = el('input', {
+    type: 'date',
+    class: 'picker',
+    tabindex: -1,
+    'aria-hidden': 'true',
+    onchange: (e) => {
+      const [, mm, dd] = e.target.value.split('-');
+      if (!dd) return;
+      input.value = `${dd}.${mm}`;
+      formDates[i] = input.value;
+      revalidate();
+      input.focus();
+    },
+  });
+  const calendar = el('button', {
+    type: 'button',
+    class: 'btn icon',
+    'aria-label': `Velg dato ${n} i kalender`,
+    onclick: () => {
+      picker.value = toIso(input.value);
+      try {
+        picker.showPicker();
+      } catch {
+        picker.focus();
+      }
+    },
+  }, calendarIcon());
+  const remove = formDates.length > 1
+    ? el('button', {
+      type: 'button',
+      class: 'btn link',
+      'aria-label': `Fjern dato ${n}`,
+      onclick: () => {
+        formDates.splice(i, 1);
+        renderDateRows();
+        revalidate();
+        const inputs = $('date-list').querySelectorAll('input[type="text"]');
+        (inputs[Math.max(0, i - 1)] ?? $('add-date')).focus();
+      },
+    }, 'Fjern')
+    : '';
+  return el('li', { class: 'date-row' },
+    el('div', { class: 'date-line' }, input, calendar, picker, remove),
+    el('p', { class: 'field-error', id: errorId }));
+}
+
+function renderDateRows() {
+  $('date-list').replaceChildren(...formDates.map(dateRow));
+  const full = formDates.length >= MAX_DATES;
+  $('add-date').hidden = full;
+  $('max-note').hidden = !full;
+}
+
+function openForm(id, opener, preset = {}) {
+  const todo = id ? findTodo(id) : null;
+  editingId = id;
+  submitted = false;
+  $('form-heading').textContent = todo ? 'Rediger gjøremål' : 'Nytt gjøremål';
+  $('f-title').value = preset.title ?? todo?.title ?? '';
+  $('f-desc').value = preset.description ?? todo?.description ?? '';
+  formDates = preset.dates ?? (todo ? [...todo.dates].sort(byDate).map((d) => `${pad(d.day)}.${pad(d.month)}`) : ['']);
+  renderDateRows();
+  updateCounters();
+  showErrors({ title: '', description: '', dates: [], group: '' });
+  openDialog($('form-dialog'), opener);
+  if (preset.submit) submitForm();
+}
+
+function focusFirstError() {
+  const invalid = $('todo-form').querySelector('[aria-invalid="true"]');
+  (invalid ?? $('date-list').querySelector('input[type="text"]')).focus();
+}
+
+function submitForm() {
+  submitted = true;
+  const result = validate();
+  showErrors(result.errors);
+  if (!result.ok) {
+    focusFirstError();
+    return;
+  }
+  const { title, description, dates } = result;
+  if (editingId) {
+    Object.assign(findTodo(editingId), { title, description, dates });
+  } else {
+    todos.push({ id: `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, title, description, dates, createdAt: new Date().toISOString() });
+  }
+  render();
+  $('form-dialog').close();
+}
+
+// ---------- Prototype states (not part of the app) ----------
+
+const PROTO_STATES = {
+  sample: () => { todos = sampleTodos(); corruptCopy = null; },
+  'empty-month': () => { todos = sampleTodos().filter((t) => !t.dates.some((d) => d.month === currentMonth())); corruptCopy = null; },
+  'empty-all': () => { todos = []; corruptCopy = null; },
+  corrupt: () => { todos = []; corruptCopy = '{"gjoremal": [{"tittel": "Dekkskift", "datoer": ["15.10"'; },
+  'form-required': (btn) => openForm(null, btn, { submit: true }),
+  'form-invalid': (btn) => openForm(null, btn, {
+    title: 'Gå over hele huset og sjekke at alle røykvarslerne virker som de skal',
+    description: 'Husk stigen. '.repeat(40),
+    dates: ['31.04', '15.05', '15.05', '30.02', 'neste uke'],
+    submit: true,
+  }),
+  'form-full': (btn) => openForm(null, btn, {
+    title: 'Lese av strømmåleren',
+    dates: Array.from({ length: MAX_DATES }, (_, i) => `01.${pad(i + 1)}`),
+  }),
+  'next-day': () => { today = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1); },
+  'real-today': () => { today = new Date(); },
+};
+
+// ---------- Wiring ----------
+
+function render() {
+  renderWheel();
+  renderMonth();
+  renderAlert();
+}
+
+// Move today's marker when the date changes while the page is open
+function scheduleMidnight() {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  setTimeout(() => {
+    today = new Date();
+    render();
+    scheduleMidnight();
+  }, next.getTime() - now.getTime() + 500);
+}
+
+function wire() {
+  $('add-btn').addEventListener('click', (e) => openForm(null, e.currentTarget));
+  $('add-date').addEventListener('click', () => {
+    formDates.push('');
+    renderDateRows();
+    revalidate();
+    const inputs = $('date-list').querySelectorAll('input[type="text"]');
+    inputs[inputs.length - 1].focus();
+  });
+  $('f-title').addEventListener('input', revalidate);
+  $('f-desc').addEventListener('input', revalidate);
+  $('todo-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitForm();
+  });
+  $('view-edit').addEventListener('click', () => openForm(viewingId, handOver($('view-dialog'))));
+  $('view-delete').addEventListener('click', () => openConfirm(viewingId, handOver($('view-dialog'))));
+  $('confirm-yes').addEventListener('click', () => {
+    todos = todos.filter((t) => t.id !== deletingId);
+    render();
+    $('confirm-dialog').close();
+  });
+  for (const dialog of document.querySelectorAll('dialog')) {
+    dialog.addEventListener('close', () => restoreFocus(openers.get(dialog)));
+    // A click on the dialog element itself is a click on the backdrop
+    dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+    for (const btn of dialog.querySelectorAll('[data-close]')) btn.addEventListener('click', () => dialog.close());
+  }
+  for (const btn of document.querySelectorAll('[data-state]')) {
+    btn.addEventListener('click', () => {
+      PROTO_STATES[btn.dataset.state](btn);
+      render();
+    });
+  }
+}
+
+todos = sampleTodos();
+wire();
+render();
+scheduleMidnight();
+</script>
+</body>
+</html>
