@@ -4,6 +4,7 @@
   --muted: #5d6763;
   --surface: #fffdf8;
   --line: #e3dccd;
+  --red: #c4302b;
   --winter: #e3e9ef;
   --winter-text: #2b3a48;
   --spring: #bfdc9c;
@@ -70,3 +71,10 @@ body {
 .tick.major { stroke: var(--text); stroke-width: 1.6; }
 .tick.first { stroke: var(--text); stroke-width: 2.4; }
 .day-num { font: 500 14px var(--sans); fill: #4a524f; text-anchor: middle; dominant-baseline: central; }
+.tick.today { stroke: var(--red); stroke-width: 2.4; }
+.day-num.today { font-weight: 700; fill: var(--text); }
+.today-ring { fill: #ffffff; stroke: var(--red); stroke-width: 3.5; filter: url(#magnet); }
+.centre { fill: #f1ede4; }
+.centre-day { font: 400 64px var(--serif); text-anchor: middle; fill: var(--text); }
+.centre-month { font: 600 22px var(--sans); text-anchor: middle; fill: var(--text); }
+.centre-weekday { font: 400 16px var(--sans); text-anchor: middle; fill: var(--muted); }

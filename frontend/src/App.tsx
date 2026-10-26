@@ -1,8 +1,9 @@
 import './App.css'
+import { useToday } from './useToday.ts'
 import Wheel from './Wheel.tsx'
 
 export default function App() {
-  const year = new Date().getFullYear()
+  const today = useToday()
   return (
     <>
       <header className="topbar">
@@ -13,7 +14,7 @@ export default function App() {
       </header>
       <main className="layout">
         <section className="wheel-area" aria-label="Årshjul">
-          <Wheel year={year} />
+          <Wheel today={today} />
         </section>
         <aside className="month" aria-label="Denne måneden">
           <p className="eyebrow">Denne måneden</p>
