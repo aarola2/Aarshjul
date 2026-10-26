@@ -33,6 +33,8 @@ const R_LABEL_FLIPPED = 462
 export const R_NUMBER = 388
 // The ring for today sits a little inside the other numbers, so it never covers the 1st, 10th or 20th
 export const R_TODAY = 356
+// For now all dots lie at the same distance from the centre; #10 spreads them by id
+export const R_DOT = 233
 
 type Point = [x: number, y: number]
 
