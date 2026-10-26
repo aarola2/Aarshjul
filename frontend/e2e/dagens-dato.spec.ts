@@ -23,15 +23,16 @@ const ANGLE_26_OCTOBER = (298.5 / 365) * 360
 const ANGLE_27_OCTOBER = (299.5 / 365) * 360
 
 test('dagens dato har alltid datotall', async ({ page }) => {
+  // An ordinary day gets a number it would not otherwise have
   await page.clock.setFixedTime(new Date('2026-10-26T12:00:00'))
   await page.goto('./')
-  await expect(page.getByText('26', { exact: true })).toBeVisible()
-})
+  await expect(wheel(page).getByText('26', { exact: true })).toBeVisible()
+  await expect(todayMarker(page)).toHaveText('26')
 
-test('dagens dato den 20. har datotall bare én gang', async ({ page }) => {
+  // On the 20th the number is shown once, in the ring
   await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'))
-  await page.goto('./')
-  await expect(page.getByText('20', { exact: true })).toHaveCount(12)
+  await page.reload()
+  await expect(wheel(page).getByText('20', { exact: true })).toHaveCount(12)
   await expect(todayMarker(page)).toHaveText('20')
 })
 

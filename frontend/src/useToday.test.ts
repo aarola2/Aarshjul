@@ -1,8 +1,16 @@
 import { act, renderHook } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { msUntilNextMidnight, useToday } from './useToday.ts'
 
 describe('msUntilNextMidnight', () => {
+  // A time zone with summer time, so the test means the same locally and in CI (UTC)
+  beforeAll(() => {
+    vi.stubEnv('TZ', 'Europe/Oslo')
+  })
+  afterAll(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('gir tiden til midnatt', () => {
     expect(msUntilNextMidnight(new Date(2026, 9, 26, 23, 59, 50))).toBe(10_000)
     expect(msUntilNextMidnight(new Date(2026, 9, 26, 0, 0, 0))).toBe(24 * 60 * 60 * 1000)
@@ -15,6 +23,12 @@ describe('msUntilNextMidnight', () => {
       expect([next.getHours(), next.getMinutes(), next.getSeconds()]).toEqual([0, 0, 0])
       expect(next.getDate()).toBe(new Date(2026, 0, 2 + day).getDate())
     }
+  })
+
+  it('gir 23 timer når sommertiden begynner og 25 når den slutter', () => {
+    const hour = 60 * 60 * 1000
+    expect(msUntilNextMidnight(new Date(2026, 2, 29))).toBe(23 * hour)
+    expect(msUntilNextMidnight(new Date(2026, 9, 25))).toBe(25 * hour)
   })
 })
 
@@ -44,6 +58,22 @@ describe('useToday', () => {
     expect(dayOf(result.current)).toEqual([2026, 10, 26])
     act(() => {
       vi.advanceTimersByTime(2_000)
+    })
+    expect(dayOf(result.current)).toEqual([2026, 10, 27])
+  })
+
+  it('venter videre hvis tidtakeren går av litt før midnatt', () => {
+    vi.setSystemTime(new Date(2026, 9, 26, 23, 59, 50))
+    const { result } = renderHook(() => useToday())
+    // The clock is 5 ms behind when the timer fires
+    vi.setSystemTime(new Date(2026, 9, 26, 23, 59, 49, 995))
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+    expect(dayOf(result.current)).toEqual([2026, 10, 26])
+    expect(vi.getTimerCount()).toBe(1)
+    act(() => {
+      vi.advanceTimersByTime(5)
     })
     expect(dayOf(result.current)).toEqual([2026, 10, 27])
   })
