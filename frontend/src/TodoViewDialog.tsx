@@ -1,6 +1,7 @@
 import DateBadge from './DateBadge.tsx'
 import type { Todo, TodoDate } from './storage.ts'
 import { useModalDialog } from './useModalDialog.ts'
+import { isLeapYear } from './wheelGeometry.ts'
 
 interface TodoViewDialogProps {
   todo: Todo
@@ -11,6 +12,9 @@ interface TodoViewDialogProps {
 }
 
 const byCalendar = (a: TodoDate, b: TodoDate) => a.month - b.month || a.day - b.day
+
+const hasHiddenLeapDay = (todo: Todo, year: number) =>
+  !isLeapYear(year) && todo.dates.some((date) => date.month === 2 && date.day === 29)
 
 export default function TodoViewDialog({ todo, today, onClose, onEdit, onDelete }: TodoViewDialogProps) {
   const dialogRef = useModalDialog()
@@ -35,6 +39,9 @@ export default function TodoViewDialog({ todo, today, onClose, onEdit, onDelete 
           ))}
         </div>
         {todo.description !== '' && <p className="desc">{todo.description}</p>}
+        {hasHiddenLeapDay(todo, today.getFullYear()) && (
+          <p className="hint">29. februar vises som 28. februar i år uten skuddår.</p>
+        )}
         <p className="repeat">↻ Gjentas automatisk hvert år</p>
         <div className="dlg-actions">
           <button

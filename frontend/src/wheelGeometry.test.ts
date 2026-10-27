@@ -12,6 +12,7 @@ import {
   monthStartAngle,
   MONTHS,
   pointOnCircle,
+  shownDay,
   tickLength,
 } from './wheelGeometry.ts'
 
@@ -143,5 +144,19 @@ describe('dager', () => {
     expect(tickLength(10)).toBe(tickLength(20))
     expect(tickLength(20)).toBeGreaterThan(tickLength(2))
     expect(tickLength(2)).toBe(tickLength(31))
+  })
+})
+
+describe('shownDay', () => {
+  it.each([
+    [2, 29, 2026, 28],
+    [2, 29, 2100, 28],
+    [2, 29, 2024, 29],
+    [2, 29, 2000, 29],
+    [2, 28, 2026, 28],
+    [3, 29, 2026, 29],
+    [1, 31, 2026, 31],
+  ])('%i/%i vises som dag %i i %i', (month, day, year, shown) => {
+    expect(shownDay({ month, day }, year)).toBe(shown)
   })
 })

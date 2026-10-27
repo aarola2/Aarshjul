@@ -153,7 +153,7 @@ describe('App, nytt gjøremål', () => {
   it.each([
     ['uten tittel', '', '15.10', 'Tittel er påkrevd.'],
     ['uten dato', 'Dekkskift', '', 'Minst én dato er påkrevd.'],
-    ['med ugyldig dato', 'Dekkskift', '31.04', 'Skriv datoen som dd.mm, for eksempel 15.05.'],
+    ['med ugyldig dato', 'Dekkskift', '31.04', '31. april finnes ikke i kalenderen.'],
   ])('lagrer ingenting %s', (_name, title, date, message) => {
     render(<App />)
     openForm()

@@ -104,7 +104,7 @@ describe('TodoFormDialog', () => {
     expect(onSave).not.toHaveBeenCalled()
     expect(titleField()).toHaveAccessibleDescription('Tittelen kan ha maks 60 tegn.')
     expect(descriptionField()).toHaveAccessibleDescription('Beskrivelsen kan ha maks 500 tegn.')
-    expect(dateField()).toHaveAccessibleDescription('Skriv datoen som dd.mm, for eksempel 15.05.')
+    expect(dateField()).toHaveAccessibleDescription('31. april finnes ikke i kalenderen.')
   })
 
   it.each([
@@ -368,7 +368,7 @@ describe('TodoFormDialog, rediger', () => {
   it.each([
     ['tom tittel', 'Tittel', '', 'Tittel er påkrevd.'],
     ['samme dato to ganger', 'Dato 2', '28.10', '28. oktober er allerede lagt inn på dette gjøremålet.'],
-    ['ugyldig dato', 'Dato 1', '31.04', 'Skriv datoen som dd.mm, for eksempel 15.05.'],
+    ['ugyldig dato', 'Dato 1', '31.04', '31. april finnes ikke i kalenderen.'],
   ])('bruker samme regler som ved oppretting: %s', (_name, label, value, message) => {
     const { onSave } = renderEdit()
     type(screen.getByLabelText(label), value)
@@ -393,5 +393,47 @@ describe('TodoFormDialog, rediger', () => {
     // The new field must not share a key with a filled-in one, or typing would change both
     type(screen.getByLabelText('Dato 4'), '24.12')
     expect(dateValues()).toEqual(['20.03', '01.06', '28.10', '24.12'])
+  })
+})
+
+describe('TodoFormDialog, feil som rettes', () => {
+  it('fjerner feilen ved datofeltet så snart det rettes, uten å lagre på nytt', () => {
+    const { onSave } = renderForm()
+    type(titleField(), 'Dekkskift')
+    type(dateField(), '31.04')
+    save()
+    expect(dateField()).toHaveAccessibleDescription('31. april finnes ikke i kalenderen.')
+    type(dateField(), '30.04')
+    expect(screen.queryByText('31. april finnes ikke i kalenderen.')).toBeNull()
+    expect(dateField()).toHaveAttribute('aria-invalid', 'false')
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('fjerner «Tittel er påkrevd.» så snart tittelen skrives', () => {
+    renderForm()
+    save()
+    type(titleField(), 'D')
+    expect(screen.queryByText('Tittel er påkrevd.')).toBeNull()
+    expect(titleField()).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByText('Minst én dato er påkrevd.')).toBeInTheDocument()
+  })
+
+  it('oppdaterer meldingen mens feltet endres etter første lagring', () => {
+    renderForm()
+    type(titleField(), 'Dekkskift')
+    type(dateField(), '31.04')
+    save()
+    type(dateField(), '30.02')
+    expect(dateField()).toHaveAccessibleDescription('30. februar finnes ikke i kalenderen.')
+    type(dateField(), 'neste uke')
+    expect(dateField()).toHaveAccessibleDescription('Skriv datoen som dd.mm, for eksempel 15.05.')
+  })
+
+  it('viser ingen feil mens brukeren skriver før første lagring', () => {
+    renderForm()
+    type(dateField(), '31.04')
+    type(titleField(), '')
+    expect(screen.queryByText(/finnes ikke/)).toBeNull()
+    expect(dateField()).toHaveAttribute('aria-invalid', 'false')
   })
 })

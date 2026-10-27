@@ -80,7 +80,7 @@ test('samme regler som ved oppretting gjelder', async ({ page }) => {
   await editForm(page).getByRole('button', { name: 'Lagre' }).click()
 
   await expect(editForm(page).getByLabel('Tittel')).toHaveAccessibleDescription('Tittel er påkrevd.')
-  await expect(dateField(page, 1)).toHaveAccessibleDescription('Skriv datoen som dd.mm, for eksempel 15.05.')
+  await expect(dateField(page, 1)).toHaveAccessibleDescription('31. april finnes ikke i kalenderen.')
   await expect(dateField(page, 3)).toHaveAccessibleDescription('28. oktober er allerede lagt inn på dette gjøremålet.')
   await expect(editForm(page)).toBeVisible()
   expect(await stored(page)).toBe(before)

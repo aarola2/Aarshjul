@@ -193,6 +193,17 @@ describe('Wheel, prikker', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
 
+  it.each([
+    [2026, 28],
+    [2027, 28],
+    [2028, 29],
+  ])('legger prikken for 29. februar på dag %i/%i: den 28. i år uten skuddår', (year, day) => {
+    render(<Wheel today={new Date(year, 0, 10)} todos={[todo('s1', 'Skuddårsdugnad', [2, 29])]} />)
+    const [dot] = screen.getAllByTestId('prikk')
+    if (!dot) throw new Error('Fant ingen prikk')
+    expect(normalise(angleOfDot(dot))).toBeCloseTo(dayAngle(2, day, year), 6)
+  })
+
   it('sender id-en til gjøremålet når en prikk klikkes', () => {
     const onOpenTodo = vi.fn()
     render(<Wheel today={new Date(2026, 9, 26)} todos={TODOS} onOpenTodo={onOpenTodo} />)

@@ -45,6 +45,10 @@ export const isLeapYear = (year: number) => (year % 4 === 0 && year % 100 !== 0)
 
 export const daysInYear = (year: number) => (isLeapYear(year) ? 366 : 365)
 
+// 29 February is shown on 28 February in years without a leap day
+export const shownDay = (date: { month: number; day: number }, year: number) =>
+  date.month === 2 && date.day === 29 && !isLeapYear(year) ? 28 : date.day
+
 export const daysInMonth = (month: number, year: number) => new Date(year, month, 0).getDate()
 
 export function dayOfYear(month: number, day: number, year: number): number {

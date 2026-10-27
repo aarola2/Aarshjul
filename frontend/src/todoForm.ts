@@ -27,13 +27,27 @@ const LEAP_YEAR = 2024
 
 const pad = (value: number) => String(value).padStart(2, '0')
 
-export function parseDate(text: string): TodoDate | null {
+const FORMAT_ERROR = 'Skriv datoen som dd.mm, for eksempel 15.05.'
+
+const dateKey = (date: TodoDate) => `${String(date.month)}.${String(date.day)}`
+const longDate = (date: TodoDate) => `${String(date.day)}. ${MONTHS[date.month - 1]?.name ?? ''}`
+
+type DateReading = { date: TodoDate } | { error: string }
+
+// Tells text that is not a date apart from a date that is not in the calendar, like 31 April
+function readDate(text: string): DateReading {
   const match = DATE_PATTERN.exec(text)
-  if (!match) return null
+  if (!match) return { error: FORMAT_ERROR }
   const day = Number(match[1])
   const month = Number(match[2])
-  if (month < 1 || month > 12 || day < 1 || day > daysInMonth(month, LEAP_YEAR)) return null
-  return { month, day }
+  if (month < 1 || month > 12 || day < 1) return { error: FORMAT_ERROR }
+  if (day > daysInMonth(month, LEAP_YEAR)) return { error: `${longDate({ month, day })} finnes ikke i kalenderen.` }
+  return { date: { month, day } }
+}
+
+export function parseDate(text: string): TodoDate | null {
+  const reading = readDate(text)
+  return 'date' in reading ? reading.date : null
 }
 
 function titleError(title: string): string | undefined {
@@ -48,23 +62,20 @@ function descriptionError(description: string): string | undefined {
     : undefined
 }
 
-const dateKey = (date: TodoDate) => `${String(date.month)}.${String(date.day)}`
-const longDate = (date: TodoDate) => `${String(date.day)}. ${MONTHS[date.month - 1]?.name ?? ''}`
-
 interface DateCheck {
   dates: TodoDate[]
   errors: (string | undefined)[]
 }
 
 // Empty fields are skipped. A date that cannot be read, or that comes again, gets an error at its own field.
-// The guard keeps values that storage would reject out of it. The precise calendar messages come in #17.
 function checkDates(texts: readonly string[]): DateCheck {
   const dates: TodoDate[] = []
   const seen = new Set<string>()
   const errors = texts.map((text) => {
     if (text.trim() === '') return undefined
-    const date = parseDate(text)
-    if (date === null) return 'Skriv datoen som dd.mm, for eksempel 15.05.'
+    const reading = readDate(text)
+    if ('error' in reading) return reading.error
+    const { date } = reading
     if (seen.has(dateKey(date))) return `${longDate(date)} er allerede lagt inn på dette gjøremålet.`
     seen.add(dateKey(date))
     dates.push(date)

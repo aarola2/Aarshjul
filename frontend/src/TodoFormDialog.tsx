@@ -17,20 +17,13 @@ interface TodoFormDialogProps {
   onClose: () => void
 }
 
-// Each date field keeps its key when others are removed, so its text and error stay with it
+// Each date field keeps its key when others are removed, so its text and date picker stay with it
 interface DateRow {
   key: number
   text: string
 }
 
-interface ShownErrors {
-  title: string | undefined
-  description: string | undefined
-  group: string | undefined
-  byRow: ReadonlyMap<number, string | undefined>
-}
-
-const NO_ERRORS: ShownErrors = { title: undefined, description: undefined, group: undefined, byRow: new Map() }
+const NO_ERRORS: FormErrors = { title: undefined, description: undefined, dates: [], group: undefined }
 
 const dateName = (index: number) => `date-${String(index + 1)}`
 
@@ -61,7 +54,7 @@ export default function TodoFormDialog({ initial, onSave, onClose }: TodoFormDia
   const focusIndex = useRef<number | null>(null)
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
-  const [errors, setErrors] = useState(NO_ERRORS)
+  const [isSubmitted, setSubmitted] = useState(false)
   const id = useId()
 
   useEffect(() => {
@@ -89,16 +82,19 @@ export default function TodoFormDialog({ initial, onSave, onClose }: TodoFormDia
     setRows(rows.filter((_, i) => i !== index))
   }
 
+  const values = { title, description, dates: rows.map((row) => row.text) }
+  // After the first attempt to save, the errors follow the fields, so they go away as soon as a field is corrected
+  const checked = isSubmitted ? validateForm(values) : undefined
+  const errors = checked && !checked.ok ? checked.errors : NO_ERRORS
+
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const result = validateForm({ title, description, dates: rows.map((row) => row.text) })
+    setSubmitted(true)
+    const result = validateForm(values)
     if (result.ok) {
-      setErrors(NO_ERRORS)
       onSave(result.draft)
       return
     }
-    const { dates, ...rest } = result.errors
-    setErrors({ ...rest, byRow: new Map(rows.map((row, i) => [row.key, dates[i]])) })
     const first = firstInvalidField(result.errors)
     const element = first && event.currentTarget.elements.namedItem(first)
     if (element instanceof HTMLElement) element.focus()
@@ -158,7 +154,7 @@ export default function TodoFormDialog({ initial, onSave, onClose }: TodoFormDia
                 key={row.key}
                 index={index}
                 value={row.text}
-                error={errors.byRow.get(row.key)}
+                error={errors.dates[index]}
                 errorId={errorId(`date-${String(row.key)}`)}
                 groupErrorId={errorId('dates')}
                 isGroupInvalid={errors.group !== undefined}
