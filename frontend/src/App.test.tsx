@@ -422,6 +422,16 @@ describe('App, slett', () => {
     expect(within(column()).getByRole('heading', { level: 3, name: 'Dekkskift' })).toBeInTheDocument()
   })
 
+  it('sletter gjøremålet som ble valgt, også når det ikke står først i lagringen', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    expect(confirm()).toHaveAccessibleDescription('«Dekkskift» slettes. Dette kan ikke angres.')
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Ja, slett' }))
+    expect(stored()).toEqual([TODOS[0]])
+    expect(screen.getAllByTestId('prikk')).toHaveLength(2)
+    expect(within(column()).getByRole('heading', { level: 3, name: 'Rense takrennene' })).toBeInTheDocument()
+  })
+
   it('lar ingen visning eller skjema for det slettede gjøremålet bli stående', () => {
     render(<App />)
     fireEvent.click(within(column()).getAllByRole('article')[0] ?? column())

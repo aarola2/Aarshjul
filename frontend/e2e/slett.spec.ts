@@ -64,18 +64,20 @@ test('«Slett» på kortet og i dialogen viser «Er du sikker?» med gjøremåle
 
 test('«Ja, slett» fjerner gjøremålet fra lagringen, hjulet og sidekolonnen', async ({ page }) => {
   await open(page)
-  await card(page, 'Rense takrennene').getByRole('button', { name: 'Slett «Rense takrennene»' }).click()
+  // The last todo in storage, so deleting the first one by mistake would be caught
+  await card(page, 'Dekkskift').getByRole('button', { name: 'Slett «Dekkskift»' }).click()
+  await expect(confirm(page).getByText('«Dekkskift» slettes. Dette kan ikke angres.')).toBeVisible()
   await confirm(page).getByRole('button', { name: 'Ja, slett' }).click()
 
   await expect(confirm(page)).toHaveCount(0)
-  await expect(dots(page)).toHaveCount(1)
-  await expect(card(page, 'Rense takrennene')).toHaveCount(0)
-  await expect(card(page, 'Dekkskift')).toBeVisible()
-  expect(JSON.parse((await stored(page)) ?? 'null')).toEqual([TODOS[1]])
+  await expect(dots(page)).toHaveCount(3)
+  await expect(card(page, 'Dekkskift')).toHaveCount(0)
+  await expect(card(page, 'Rense takrennene')).toBeVisible()
+  expect(JSON.parse((await stored(page)) ?? 'null')).toEqual([TODOS[0]])
 
   await page.reload()
-  await expect(dots(page)).toHaveCount(1)
-  await expect(card(page, 'Rense takrennene')).toHaveCount(0)
+  await expect(dots(page)).toHaveCount(3)
+  await expect(card(page, 'Dekkskift')).toHaveCount(0)
 })
 
 test('«Avbryt» lar gjøremålet være uendret', async ({ page }) => {
