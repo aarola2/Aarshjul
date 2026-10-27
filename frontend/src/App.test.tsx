@@ -226,11 +226,7 @@ describe('App, vise et gjøremål', () => {
 
   it('åpner gjøremålet til prikken som klikkes', () => {
     render(<App />)
-    // Dots are drawn in the order of the todos, so the last one belongs to Dekkskift
-    const dots = screen.getAllByTestId('prikk')
-    const last = dots[dots.length - 1]
-    if (!last) throw new Error('Fant ingen prikk')
-    fireEvent.click(last)
+    fireEvent.click(screen.getByRole('button', { name: 'Dekkskift, 15. april' }))
     expect(within(view('Dekkskift')).getByText('15. apr')).toBeInTheDocument()
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
   })

@@ -14,7 +14,7 @@ const form = (page: Page) => page.getByRole('dialog', { name: 'Nytt gjøremål' 
 const dateField = (page: Page) => form(page).getByLabel('Dato 1', { exact: true })
 const column = (page: Page) => page.getByRole('complementary', { name: 'Denne måneden' })
 const wheel = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' })
-// Role and accessible name for the dots come with keyboard support in #21
+// All the dots; a single dot is found by its role and name
 const dots = (page: Page) => page.getByTestId('prikk')
 const stored = (page: Page) => page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)
 
@@ -91,10 +91,9 @@ test('29. februar kan lagres', async ({ page }) => {
 })
 
 test('i år uten skuddår vises 29. februar som 28. februar på hjulet og i sidekolonnen', async ({ page }) => {
-  // Created first, so its dot comes first in the order the dots are drawn
   const todos = [todo('a1', 'Skuddårsdugnad', [2, 29]), todo('b2', 'Vanlig februar', [2, 28])]
-  const leapDot = (p: Page) => dots(p).first()
-  const ordinaryDot = (p: Page) => dots(p).last()
+  const leapDot = (p: Page) => p.getByRole('button', { name: /^Skuddårsdugnad, / })
+  const ordinaryDot = (p: Page) => p.getByRole('button', { name: 'Vanlig februar, 28. februar' })
   const card = (p: Page) =>
     column(p).getByRole('article').filter({ has: p.getByRole('heading', { name: 'Skuddårsdugnad' }) })
 
