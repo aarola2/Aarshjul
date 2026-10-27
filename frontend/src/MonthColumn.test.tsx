@@ -198,8 +198,10 @@ describe('MonthColumn, tomtilstand', () => {
   it('har forklaringen under «Ingen oppgaver denne måneden»', () => {
     renderColumn(TODAY, [])
     const title = screen.getByText(EMPTY_TITLE)
+    // The explanation is the paragraph around the title, so the title must come first in it
     const explanation = screen.getByText('Gjøremål med en dato i oktober dukker opp her.')
-    expect(title.compareDocumentPosition(explanation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(explanation).toContainElement(title)
+    expect(explanation.textContent).toBe(`${EMPTY_TITLE}Gjøremål med en dato i oktober dukker opp her.`)
   })
 
   it('viser ikke tomtilstanden når måneden har et gjøremål', () => {
