@@ -40,7 +40,6 @@ describe('TodoFormDialog', () => {
     expect(dateField()).toHaveValue('')
     expect(screen.getAllByRole('textbox')).toHaveLength(3)
     expect(screen.getByRole('button', { name: 'Velg dato 1 i kalender' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Legg til ekstra dato/ })).toBeNull()
   })
 
   it('lagrer et gyldig gjøremål og viser ingen feil', () => {
@@ -173,5 +172,132 @@ describe('TodoFormDialog', () => {
     type(dateField(), '15.10')
     fireEvent.change(picker(container), { target: { value: '' } })
     expect(dateField()).toHaveValue('15.10')
+  })
+})
+
+describe('TodoFormDialog, flere datoer', () => {
+  const dateFields = () => screen.getAllByLabelText(/^Dato \d+$/)
+  const nthDate = (n: number) => screen.getByLabelText(`Dato ${String(n)}`)
+  const addButton = () => screen.queryByRole('button', { name: '+ Legg til ekstra dato' })
+  const addDate = () => {
+    const button = addButton()
+    if (!button) throw new Error('Knappen «+ Legg til ekstra dato» mangler')
+    fireEvent.click(button)
+  }
+  const removeDate = (n: number) => {
+    fireEvent.click(screen.getByRole('button', { name: `Fjern dato ${String(n)}` }))
+  }
+  const datePickers = (container: HTMLElement) => [...container.querySelectorAll<HTMLInputElement>('input[type="date"]')]
+
+  it('har ingen «Fjern» når det bare er én dato', () => {
+    renderForm()
+    expect(screen.queryByRole('button', { name: /Fjern/ })).toBeNull()
+  })
+
+  it('«+ Legg til ekstra dato» legger til et tomt felt som får fokus, med egen kalender og «Fjern»', () => {
+    renderForm()
+    type(nthDate(1), '15.10')
+    addDate()
+    expect(dateFields()).toHaveLength(2)
+    expect(nthDate(1)).toHaveValue('15.10')
+    expect(nthDate(2)).toHaveValue('')
+    expect(nthDate(2)).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Velg dato 2 i kalender' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Fjern dato 1' })).toHaveTextContent('Fjern')
+    expect(screen.getByRole('button', { name: 'Fjern dato 2' })).toBeInTheDocument()
+  })
+
+  it('«Fjern» tar bort riktig felt, nummererer på nytt og gir fokus til feltet før', () => {
+    renderForm()
+    addDate()
+    addDate()
+    type(nthDate(1), '1.1')
+    type(nthDate(2), '2.2')
+    type(nthDate(3), '3.3')
+    removeDate(2)
+    expect(dateFields().map((field) => (field as HTMLInputElement).value)).toEqual(['1.1', '3.3'])
+    expect(nthDate(1)).toHaveFocus()
+    removeDate(1)
+    expect(dateFields().map((field) => (field as HTMLInputElement).value)).toEqual(['3.3'])
+    expect(nthDate(1)).toHaveFocus()
+    expect(screen.queryByRole('button', { name: /Fjern/ })).toBeNull()
+  })
+
+  it('lagrer alle datoene og hopper over tomme felt', () => {
+    const { onSave } = renderForm()
+    type(titleField(), 'Rense takrennene')
+    type(nthDate(1), '20.10')
+    addDate()
+    addDate()
+    type(nthDate(3), '3/10')
+    save()
+    expect(onSave).toHaveBeenCalledExactlyOnceWith({
+      title: 'Rense takrennene',
+      description: '',
+      dates: [{ month: 10, day: 20 }, { month: 10, day: 3 }],
+    })
+  })
+
+  it('går ikke over 12 datoer: knappen forsvinner og grensen vises', () => {
+    renderForm()
+    for (let i = 0; i < 11; i++) addDate()
+    expect(dateFields()).toHaveLength(12)
+    expect(addButton()).toBeNull()
+    expect(screen.getByText('Maks 12 datoer per gjøremål.')).toBeInTheDocument()
+  })
+
+  it('viser knappen igjen når et felt fjernes fra 12', () => {
+    renderForm()
+    for (let i = 0; i < 11; i++) addDate()
+    removeDate(12)
+    expect(dateFields()).toHaveLength(11)
+    expect(addButton()).toBeInTheDocument()
+    expect(screen.queryByText('Maks 12 datoer per gjøremål.')).toBeNull()
+  })
+
+  it('viser ikke grensen før den er nådd', () => {
+    renderForm()
+    for (let i = 0; i < 10; i++) addDate()
+    expect(dateFields()).toHaveLength(11)
+    expect(addButton()).toBeInTheDocument()
+    expect(screen.queryByText('Maks 12 datoer per gjøremål.')).toBeNull()
+  })
+
+  it('viser duplikatet ved det andre feltet, og lagrer ikke', () => {
+    const { onSave } = renderForm()
+    type(titleField(), 'Vårvask')
+    type(nthDate(1), '15.05')
+    addDate()
+    type(nthDate(2), '15/5')
+    save()
+    expect(onSave).not.toHaveBeenCalled()
+    expect(nthDate(1)).toHaveAttribute('aria-invalid', 'false')
+    expect(nthDate(2)).toHaveAttribute('aria-invalid', 'true')
+    expect(nthDate(2)).toHaveAccessibleDescription('15. mai er allerede lagt inn på dette gjøremålet.')
+    expect(nthDate(2)).toHaveFocus()
+  })
+
+  it('kobler «Minst én dato er påkrevd.» til alle de tomme datofeltene', () => {
+    renderForm()
+    type(titleField(), 'Vårvask')
+    addDate()
+    save()
+    for (const field of dateFields()) {
+      expect(field).toHaveAttribute('aria-invalid', 'true')
+      expect(field).toHaveAccessibleDescription('Minst én dato er påkrevd.')
+    }
+    expect(screen.getAllByText('Minst én dato er påkrevd.')).toHaveLength(1)
+    expect(nthDate(1)).toHaveFocus()
+  })
+
+  it('fyller raden som hører til kalenderen som ble brukt', () => {
+    const { container } = renderForm()
+    addDate()
+    const second = datePickers(container)[1]
+    if (!second) throw new Error('Fant ikke den andre datovelgeren')
+    fireEvent.change(second, { target: { value: '2026-12-24' } })
+    expect(nthDate(1)).toHaveValue('')
+    expect(nthDate(2)).toHaveValue('24.12')
+    expect(nthDate(2)).toHaveFocus()
   })
 })

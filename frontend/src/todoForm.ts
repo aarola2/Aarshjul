@@ -1,14 +1,20 @@
-import { MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH, type Todo, type TodoDate } from './storage.ts'
-import { daysInMonth } from './wheelGeometry.ts'
+import { MAX_DATES, MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH, type Todo, type TodoDate } from './storage.ts'
+import { daysInMonth, MONTHS } from './wheelGeometry.ts'
 
 export interface FormValues {
   title: string
   description: string
-  date: string
+  // One text per date field, as typed
+  dates: string[]
 }
 
-// undefined means the field has no error
-export type FormErrors = Record<keyof FormValues, string | undefined>
+// undefined means no error. dates has one entry per date field; group applies to all of them.
+export interface FormErrors {
+  title: string | undefined
+  description: string | undefined
+  dates: (string | undefined)[]
+  group: string | undefined
+}
 
 export type TodoDraft = Pick<Todo, 'title' | 'description' | 'dates'>
 
@@ -42,24 +48,49 @@ function descriptionError(description: string): string | undefined {
     : undefined
 }
 
+const dateKey = (date: TodoDate) => `${String(date.month)}.${String(date.day)}`
+const longDate = (date: TodoDate) => `${String(date.day)}. ${MONTHS[date.month - 1]?.name ?? ''}`
+
+interface DateCheck {
+  dates: TodoDate[]
+  errors: (string | undefined)[]
+}
+
+// Empty fields are skipped. A date that cannot be read, or that comes again, gets an error at its own field.
 // The guard keeps values that storage would reject out of it. The precise calendar messages come in #17.
-function dateError(text: string, date: TodoDate | null): string | undefined {
-  if (text.trim() === '') return 'Minst én dato er påkrevd.'
-  if (date === null) return 'Skriv datoen som dd.mm, for eksempel 15.05.'
+function checkDates(texts: readonly string[]): DateCheck {
+  const dates: TodoDate[] = []
+  const seen = new Set<string>()
+  const errors = texts.map((text) => {
+    if (text.trim() === '') return undefined
+    const date = parseDate(text)
+    if (date === null) return 'Skriv datoen som dd.mm, for eksempel 15.05.'
+    if (seen.has(dateKey(date))) return `${longDate(date)} er allerede lagt inn på dette gjøremålet.`
+    seen.add(dateKey(date))
+    dates.push(date)
+    return undefined
+  })
+  return { dates, errors }
+}
+
+function groupError(texts: readonly string[], dates: readonly TodoDate[]): string | undefined {
+  if (texts.every((text) => text.trim() === '')) return 'Minst én dato er påkrevd.'
+  if (dates.length > MAX_DATES) return `Maks ${String(MAX_DATES)} datoer per gjøremål.`
   return undefined
 }
 
 export function validateForm(values: FormValues): FormResult {
   const title = values.title.trim()
   const description = values.description.trim()
-  const date = parseDate(values.date)
+  const { dates, errors: dateErrors } = checkDates(values.dates)
   const errors: FormErrors = {
     title: titleError(title),
     description: descriptionError(description),
-    date: dateError(values.date, date),
+    dates: dateErrors,
+    group: groupError(values.dates, dates),
   }
-  if (date === null || errors.title !== undefined || errors.description !== undefined) return { ok: false, errors }
-  return { ok: true, draft: { title, description, dates: [date] } }
+  const hasError = [errors.title, errors.description, errors.group, ...errors.dates].some((error) => error !== undefined)
+  return hasError ? { ok: false, errors } : { ok: true, draft: { title, description, dates } }
 }
 
 // A new id is drawn until it is not used by any stored todo
