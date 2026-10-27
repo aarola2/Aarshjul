@@ -1,11 +1,12 @@
-import { type MouseEvent, useMemo, useState } from 'react'
-import { placeDots } from './dotPlacement.ts'
-import type { Todo } from './storage.ts'
+import { type KeyboardEvent, useMemo, useState } from 'react'
+import { type PlacedDot, placeDots } from './dotPlacement.ts'
+import type { Todo, TodoDate } from './storage.ts'
 import {
   bandPath,
   type CalendarDay,
   CENTRE,
   dayAngle,
+  dayOfYear,
   daysOfYear,
   hasDayNumber,
   labelArcPath,
@@ -41,18 +42,28 @@ const NO_TODOS: readonly Todo[] = []
 
 const labelArcId = (month: number) => `month-arc-${String(month)}`
 
+// Read out as «Title, 15. mai», with the day that is shown on the wheel
+const dotLabel = (todo: Todo, date: TodoDate, year: number) =>
+  `${todo.title}, ${String(shownDay(date, year))}. ${MONTHS[date.month - 1]?.name ?? ''}`
+
+// Drawn, and so reached with Tab, in calendar order from January, then from the centre outwards
+function inCalendarOrder(dots: readonly PlacedDot[], year: number): PlacedDot[] {
+  const dayIndex = (dot: PlacedDot) => dayOfYear(dot.date.month, shownDay(dot.date, year), year)
+  return [...dots].sort((a, b) => dayIndex(a) - dayIndex(b) || a.radius - b.radius)
+}
+
 export default function Wheel({ today, todos = NO_TODOS, onOpenTodo }: WheelProps) {
   const year = today.getFullYear()
   const isToday = (month: number, day: number) => month === today.getMonth() + 1 && day === today.getDate()
   const [tooltip, setTooltip] = useState<Tooltip | null>(null)
   // Placing is only redone when the todos or the year change, not on every hover
-  const dots = useMemo(() => placeDots(todos, year), [todos, year])
+  const dots = useMemo(() => inCalendarOrder(placeDots(todos, year), year), [todos, year])
 
   // The tooltip is placed above the dot, relative to the area around the wheel
-  const showTooltip = (event: MouseEvent<SVGGElement>, title: string) => {
-    const area = event.currentTarget.ownerSVGElement?.parentElement?.getBoundingClientRect()
-    // Measure the dot itself, not the whole group, so a larger focus ring later does not move the tooltip
-    const dot = (event.currentTarget.querySelector('circle') ?? event.currentTarget).getBoundingClientRect()
+  const showTooltip = (element: SVGGElement, title: string) => {
+    const area = element.ownerSVGElement?.parentElement?.getBoundingClientRect()
+    // Measure the dot itself, not the whole group, so the larger focus ring does not move the tooltip
+    const dot = (element.querySelector('circle') ?? element).getBoundingClientRect()
     setTooltip({
       title,
       left: dot.left + dot.width / 2 - (area?.left ?? 0),
@@ -87,28 +98,20 @@ export default function Wheel({ today, todos = NO_TODOS, onOpenTodo }: WheelProp
         </g>
         <TodayMarker today={today} />
         <Centre today={today} />
-        {dots.map(({ todo, date, radius }) => {
-          const { month, day } = date
-          const [cx, cy] = pointOnCircle(radius, dayAngle(month, shownDay(date, year), year))
-          return (
-            <g
-              key={`${todo.id}-${String(month)}-${String(day)}`}
-              className="dot"
-              data-testid="prikk"
-              onMouseEnter={(event) => {
-                showTooltip(event, todo.title)
-              }}
-              onMouseLeave={() => {
-                setTooltip(null)
-              }}
-              onClick={() => {
-                onOpenTodo?.(todo.id)
-              }}
-            >
-              <circle className="dot-mark" cx={cx} cy={cy} r={7} />
-            </g>
-          )
-        })}
+        {dots.map((dot) => (
+          <WheelDot
+            key={`${dot.todo.id}-${String(dot.date.month)}-${String(dot.date.day)}`}
+            dot={dot}
+            year={year}
+            onShowTitle={showTooltip}
+            onHideTitle={() => {
+              setTooltip(null)
+            }}
+            onOpen={() => {
+              onOpenTodo?.(dot.todo.id)
+            }}
+          />
+        ))}
       </svg>
       {tooltip && (
         <div className="tooltip" role="tooltip" style={{ left: tooltip.left, top: tooltip.top }}>
@@ -116,6 +119,48 @@ export default function Wheel({ today, todos = NO_TODOS, onOpenTodo }: WheelProp
         </div>
       )}
     </>
+  )
+}
+
+interface WheelDotProps {
+  dot: PlacedDot
+  year: number
+  onShowTitle: (element: SVGGElement, title: string) => void
+  onHideTitle: () => void
+  onOpen: () => void
+}
+
+// A button for the keyboard and screen readers: Tab reaches it, Enter and space open it,
+// and focus shows the title just like hovering does
+function WheelDot({ dot: { todo, date, radius }, year, onShowTitle, onHideTitle, onOpen }: WheelDotProps) {
+  const [cx, cy] = pointOnCircle(radius, dayAngle(date.month, shownDay(date, year), year))
+  const onKeyDown = (event: KeyboardEvent<SVGGElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    // Space would otherwise scroll the page
+    event.preventDefault()
+    onOpen()
+  }
+  return (
+    <g
+      className="dot"
+      data-testid="prikk"
+      role="button"
+      tabIndex={0}
+      aria-label={dotLabel(todo, date, year)}
+      onMouseEnter={(event) => {
+        onShowTitle(event.currentTarget, todo.title)
+      }}
+      onMouseLeave={onHideTitle}
+      onFocus={(event) => {
+        onShowTitle(event.currentTarget, todo.title)
+      }}
+      onBlur={onHideTitle}
+      onClick={onOpen}
+      onKeyDown={onKeyDown}
+    >
+      <circle className="dot-mark" cx={cx} cy={cy} r={7} />
+      <circle className="dot-focus" data-testid="fokusring" cx={cx} cy={cy} r={15} />
+    </g>
   )
 }
 

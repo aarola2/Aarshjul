@@ -91,10 +91,9 @@ test('29. februar kan lagres', async ({ page }) => {
 })
 
 test('i år uten skuddår vises 29. februar som 28. februar på hjulet og i sidekolonnen', async ({ page }) => {
-  // Created first, so its dot comes first in the order the dots are drawn
   const todos = [todo('a1', 'Skuddårsdugnad', [2, 29]), todo('b2', 'Vanlig februar', [2, 28])]
-  const leapDot = (p: Page) => dots(p).first()
-  const ordinaryDot = (p: Page) => dots(p).last()
+  const leapDot = (p: Page) => p.getByRole('button', { name: /^Skuddårsdugnad, / })
+  const ordinaryDot = (p: Page) => p.getByRole('button', { name: 'Vanlig februar, 28. februar' })
   const card = (p: Page) =>
     column(p).getByRole('article').filter({ has: p.getByRole('heading', { name: 'Skuddårsdugnad' }) })
 

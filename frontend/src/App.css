@@ -115,9 +115,11 @@ body {
 .centre-day { font: 400 64px var(--serif); text-anchor: middle; fill: var(--text); }
 .centre-month { font: 600 22px var(--sans); text-anchor: middle; fill: var(--text); }
 .centre-weekday { font: 400 16px var(--sans); text-anchor: middle; fill: var(--muted); }
-.dot { cursor: pointer; }
+.dot { cursor: pointer; outline: none; }
 .dot-mark { r: 7px; fill: var(--text); stroke: var(--surface); stroke-width: 2; transition: r 0.12s; }
-.dot:hover .dot-mark { r: 10px; }
+.dot:hover .dot-mark, .dot:focus-visible .dot-mark { r: 10px; }
+.dot-focus { fill: none; stroke: none; }
+.dot:focus-visible .dot-focus { stroke: var(--text); stroke-width: 2.5; }
 .tooltip {
   position: absolute;
   transform: translate(-50%, calc(-100% - 10px));

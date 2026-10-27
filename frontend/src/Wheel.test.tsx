@@ -1,8 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Todo } from './storage.ts'
 import Wheel from './Wheel.tsx'
-import { dayAngle } from './wheelGeometry.ts'
+import { dayAngle, MONTHS } from './wheelGeometry.ts'
 
 const renderWheel = () => render(<Wheel today={new Date(2026, 2, 15)} />).container
 
@@ -165,6 +165,7 @@ describe('Wheel, prikker', () => {
     return Math.atan2(Number(mark?.getAttribute('cx')) - 500, 500 - Number(mark?.getAttribute('cy')))
   }
   const normalise = (angle: number) => (angle + 2 * Math.PI) % (2 * Math.PI)
+  const dotName = (title: string, month: number, day: number) => `${title}, ${String(day)}. ${MONTHS[month - 1]?.name ?? ''}`
 
   it('tegner én prikk per dato per gjøremål', () => {
     expect(renderDots(TODOS)).toHaveLength(6)
@@ -175,12 +176,13 @@ describe('Wheel, prikker', () => {
   })
 
   it('legger hver prikk langs linjen for sin dato', () => {
-    const angles = renderDots(TODOS).map((dot) => normalise(angleOfDot(dot)))
-    const expected = TODOS.flatMap(({ dates }) => dates.map(({ month, day }) => dayAngle(month, day, 2026)))
-    expect(angles).toHaveLength(expected.length)
-    angles.forEach((angle, i) => {
-      expect(angle).toBeCloseTo(expected[i] ?? NaN, 6)
-    })
+    renderDots(TODOS)
+    for (const { title, dates } of TODOS) {
+      for (const { month, day } of dates) {
+        const dot = screen.getByRole('button', { name: dotName(title, month, day) })
+        expect(normalise(angleOfDot(dot))).toBeCloseTo(dayAngle(month, day, 2026), 6)
+      }
+    }
   })
 
   it('viser tittelen når musen holdes over en prikk, og skjuler den etterpå', () => {
@@ -207,13 +209,12 @@ describe('Wheel, prikker', () => {
   it('sender id-en til gjøremålet når en prikk klikkes', () => {
     const onOpenTodo = vi.fn()
     render(<Wheel today={new Date(2026, 9, 26)} todos={TODOS} onOpenTodo={onOpenTodo} />)
-    const dots = screen.getAllByTestId('prikk')
-    // The dots come in the order of the todos and their dates
-    const owners = TODOS.flatMap((item) => item.dates.map(() => item.id))
-    dots.forEach((dot, i) => {
-      fireEvent.click(dot)
-      expect(onOpenTodo).toHaveBeenLastCalledWith(owners[i])
-    })
+    for (const { id, title, dates } of TODOS) {
+      for (const { month, day } of dates) {
+        fireEvent.click(screen.getByRole('button', { name: dotName(title, month, day) }))
+        expect(onOpenTodo).toHaveBeenLastCalledWith(id)
+      }
+    }
     expect(onOpenTodo).toHaveBeenCalledTimes(6)
   })
 
@@ -223,5 +224,94 @@ describe('Wheel, prikker', () => {
     expect(() => {
       fireEvent.click(dot)
     }).not.toThrow()
+  })
+})
+
+describe('Wheel, tastatur og skjermleser', () => {
+  const todo = (id: string, title: string, ...dates: [number, number][]): Todo => ({
+    id,
+    title,
+    description: '',
+    dates: dates.map(([month, day]) => ({ month, day })),
+    createdAt: '2026-01-02T09:00:00.000Z',
+  })
+  // Stored in an order that differs from the calendar
+  const TODOS = [
+    todo('a1', 'Dekkskift', [4, 15], [10, 15]),
+    todo('b2', 'Vårvask av garasjen', [5, 15]),
+    todo('c3', 'Rense takrennene', [3, 20], [6, 1], [9, 1]),
+  ]
+  const renderWheel = (onOpenTodo = vi.fn(), today = new Date(2026, 9, 26), todos: readonly Todo[] = TODOS) => {
+    render(<Wheel today={today} todos={todos} onOpenTodo={onOpenTodo} />)
+    return onOpenTodo
+  }
+  const dots = () => screen.getAllByTestId('prikk')
+
+  it('gjør hver prikk til en knapp som kan nås med Tab', () => {
+    renderWheel()
+    for (const dot of dots()) {
+      expect(dot).toHaveAttribute('role', 'button')
+      expect(dot).toHaveAttribute('tabindex', '0')
+    }
+    expect(screen.getAllByRole('button')).toHaveLength(6)
+  })
+
+  it('leser opp hver prikk som «Tittel, dato»', () => {
+    renderWheel()
+    expect(screen.getByRole('button', { name: 'Vårvask av garasjen, 15. mai' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Dekkskift, 15. oktober' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Rense takrennene, 1. september' })).toBeInTheDocument()
+  })
+
+  it.each([
+    [2026, 'Skuddårsdugnad, 28. februar'],
+    [2028, 'Skuddårsdugnad, 29. februar'],
+  ])('leser opp 29. februar som datoen som vises i %i', (year, name) => {
+    renderWheel(vi.fn(), new Date(year, 5, 1), [todo('s1', 'Skuddårsdugnad', [2, 29])])
+    expect(screen.getByRole('button', { name })).toBeInTheDocument()
+  })
+
+  it('går gjennom prikkene i kalenderrekkefølge, fra januar', () => {
+    renderWheel()
+    expect(dots().map((dot) => dot.getAttribute('aria-label'))).toEqual([
+      'Rense takrennene, 20. mars',
+      'Dekkskift, 15. april',
+      'Vårvask av garasjen, 15. mai',
+      'Rense takrennene, 1. juni',
+      'Rense takrennene, 1. september',
+      'Dekkskift, 15. oktober',
+    ])
+  })
+
+  it.each([
+    ['Enter', 'Enter'],
+    ['mellomrom', ' '],
+  ])('%s åpner gjøremålet og hindrer at siden ruller', (_name, key) => {
+    const onOpenTodo = renderWheel()
+    const dot = screen.getByRole('button', { name: 'Vårvask av garasjen, 15. mai' })
+    const notPrevented = fireEvent.keyDown(dot, { key })
+    expect(onOpenTodo).toHaveBeenCalledExactlyOnceWith('b2')
+    expect(notPrevented).toBe(false)
+  })
+
+  it.each(['a', 'Tab', 'Escape', 'ArrowDown'])('andre taster (%s) åpner ingenting', (key) => {
+    const onOpenTodo = renderWheel()
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Dekkskift, 15. april' }), { key })
+    expect(onOpenTodo).not.toHaveBeenCalled()
+  })
+
+  it('viser tittelen når prikken får fokus, og skjuler den når fokus går videre', () => {
+    renderWheel()
+    const dot = screen.getByRole('button', { name: 'Dekkskift, 15. april' })
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    fireEvent.focus(dot)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Dekkskift')
+    fireEvent.blur(dot)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('har en fokusring rundt hver prikk', () => {
+    renderWheel()
+    for (const dot of dots()) expect(within(dot).getByTestId('fokusring')).toBeInTheDocument()
   })
 })
