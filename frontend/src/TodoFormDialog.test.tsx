@@ -437,3 +437,77 @@ describe('TodoFormDialog, feil som rettes', () => {
     expect(dateField()).toHaveAttribute('aria-invalid', 'false')
   })
 })
+
+describe('TodoFormDialog, lengdegrenser', () => {
+  it.each([
+    [60, true],
+    [61, false],
+  ])('tittel på %i tegn lagres: %s', (length, saved) => {
+    const { onSave } = renderForm()
+    type(titleField(), 'a'.repeat(length))
+    type(dateField(), '15.10')
+    save()
+    expect(onSave).toHaveBeenCalledTimes(saved ? 1 : 0)
+    expect(screen.queryByText('Tittelen kan ha maks 60 tegn.') === null).toBe(saved)
+    expect(titleField()).toHaveAttribute('aria-invalid', String(!saved))
+  })
+
+  it.each([
+    [500, true],
+    [501, false],
+  ])('beskrivelse på %i tegn lagres: %s', (length, saved) => {
+    const { onSave } = renderForm()
+    type(titleField(), 'Dekkskift')
+    type(descriptionField(), 'b'.repeat(length))
+    type(dateField(), '15.10')
+    save()
+    expect(onSave).toHaveBeenCalledTimes(saved ? 1 : 0)
+    expect(screen.queryByText('Beskrivelsen kan ha maks 500 tegn.') === null).toBe(saved)
+    expect(descriptionField()).toHaveAttribute('aria-invalid', String(!saved))
+  })
+})
+
+describe('TodoFormDialog, tegnteller', () => {
+  it('viser 0/60 og 0/500 når skjemaet er tomt', () => {
+    renderForm()
+    expect(screen.getByText('0/60')).toBeInTheDocument()
+    expect(screen.getByText('0/500')).toBeInTheDocument()
+  })
+
+  it('teller mens brukeren skriver, uten mellomrom i endene', () => {
+    renderForm()
+    type(titleField(), '  Dekkskift  ')
+    type(descriptionField(), 'Bytt dekk.')
+    expect(screen.getByText('9/60')).toBeInTheDocument()
+    expect(screen.getByText('10/500')).toBeInTheDocument()
+  })
+
+  it('markerer telleren når grensen er passert, men ikke på grensen', () => {
+    renderForm()
+    type(titleField(), 'a'.repeat(60))
+    type(descriptionField(), 'b'.repeat(501))
+    expect(screen.getByText('60/60')).not.toHaveClass('over')
+    expect(screen.getByText('501/500')).toHaveClass('counter', 'over')
+    type(titleField(), 'a'.repeat(61))
+    expect(screen.getByText('61/60')).toHaveClass('over')
+  })
+
+  it('viser lengden på verdiene som redigeres', () => {
+    render(
+      <TodoFormDialog
+        initial={{ title: 'Rense takrennene', description: 'Begge sider.', dates: [{ month: 10, day: 3 }] }}
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('16/60')).toBeInTheDocument()
+    expect(screen.getByText('12/500')).toBeInTheDocument()
+  })
+
+  it('leses ikke opp sammen med feltet, så feilmeldingen står alene', () => {
+    renderForm()
+    type(titleField(), 'a'.repeat(61))
+    save()
+    expect(titleField()).toHaveAccessibleDescription('Tittelen kan ha maks 60 tegn.')
+  })
+})

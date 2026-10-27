@@ -1,5 +1,5 @@
 import { type SubmitEvent, useEffect, useId, useRef, useState } from 'react'
-import { MAX_DATES, type TodoDate } from './storage.ts'
+import { MAX_DATES, MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH, type TodoDate } from './storage.ts'
 import {
   type FormErrors,
   formatDate,
@@ -110,7 +110,10 @@ export default function TodoFormDialog({ initial, onSave, onClose }: TodoFormDia
         </button>
         <h2 id={`${id}-heading`}>{initial ? 'Rediger gjøremål' : 'Nytt gjøremål'}</h2>
         <div className="field">
-          <label htmlFor={`${id}-title`}>Tittel</label>
+          <div className="label-row">
+            <label htmlFor={`${id}-title`}>Tittel</label>
+            <Counter text={title} max={MAX_TITLE_LENGTH} />
+          </div>
           <input
             ref={titleRef}
             id={`${id}-title`}
@@ -127,9 +130,12 @@ export default function TodoFormDialog({ initial, onSave, onClose }: TodoFormDia
           <FieldError id={errorId('title')} message={errors.title} />
         </div>
         <div className="field">
-          <label htmlFor={`${id}-description`}>
-            Beskrivelse <span className="optional">(valgfri)</span>
-          </label>
+          <div className="label-row">
+            <label htmlFor={`${id}-description`}>
+              Beskrivelse <span className="optional">(valgfri)</span>
+            </label>
+            <Counter text={description} max={MAX_DESCRIPTION_LENGTH} />
+          </div>
           <textarea
             id={`${id}-description`}
             name="description"
@@ -268,6 +274,13 @@ function DateField({ index, value, error, errorId, groupErrorId, isGroupInvalid,
       <FieldError id={errorId} message={error} />
     </li>
   )
+}
+
+// Counts like the validation does, without spaces at the ends. It is shown, but not read out with the
+// field: going over the limit gives an error message, which is read out.
+function Counter({ text, max }: { text: string; max: number }) {
+  const length = text.trim().length
+  return <span className={`counter${length > max ? ' over' : ''}`}>{`${String(length)}/${String(max)}`}</span>
 }
 
 function FieldError({ id, message }: { id: string; message: string | undefined }) {
