@@ -193,3 +193,64 @@ describe('App, nytt gjøremål', () => {
     expect(screen.getByLabelText('Dato 1')).toHaveValue('')
   })
 })
+
+describe('App, vise et gjøremål', () => {
+  const TODOS = [
+    {
+      id: 'c3',
+      title: 'Rense takrennene',
+      description: 'Begge sider av huset.',
+      dates: [{ month: 10, day: 3 }, { month: 3, day: 20 }],
+      createdAt: '2026-01-02T09:00:00.000Z',
+    },
+    { id: 'a1', title: 'Dekkskift', description: '', dates: [{ month: 4, day: 15 }], createdAt: '2026-01-02T09:00:00.000Z' },
+  ]
+
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(TODOS))
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const view = (title: string) => screen.getByRole('dialog', { name: title })
+
+  it('er lukket fra start', () => {
+    render(<App />)
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('åpner gjøremålet til prikken som klikkes', () => {
+    render(<App />)
+    // Dots are drawn in the order of the todos, so the last one belongs to Dekkskift
+    const dots = screen.getAllByTestId('prikk')
+    const last = dots[dots.length - 1]
+    if (!last) throw new Error('Fant ingen prikk')
+    fireEvent.click(last)
+    expect(within(view('Dekkskift')).getByText('15. apr')).toBeInTheDocument()
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+  })
+
+  it('åpner samme dialog fra kortet, med alle datoene', () => {
+    render(<App />)
+    const column = screen.getByRole('complementary', { name: 'Denne måneden' })
+    fireEvent.click(within(column).getByRole('article'))
+    const dialog = view('Rense takrennene')
+    expect(within(dialog).getByText('20. mar')).toBeInTheDocument()
+    expect(within(dialog).getByText('3. okt')).toBeInTheDocument()
+    expect(within(dialog).getByText('Begge sider av huset.')).toBeInTheDocument()
+  })
+
+  it('lukker dialogen uten å endre lagringen', () => {
+    render(<App />)
+    const before = localStorage.getItem(STORAGE_KEY)
+    fireEvent.click(within(screen.getByRole('complementary', { name: 'Denne måneden' })).getByRole('article'))
+    fireEvent.click(within(view('Rense takrennene')).getByRole('button', { name: 'Lukk' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(before)
+  })
+})

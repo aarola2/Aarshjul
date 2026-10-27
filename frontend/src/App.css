@@ -4,6 +4,7 @@
   --muted: #5d6763;
   --surface: #fffdf8;
   --line: #e3dccd;
+  --line-strong: #9b917c;
   --card: #f9f6ef;
   --red: #c4302b;
   --error: #b3261e;
@@ -58,7 +59,8 @@ body {
 
 /* Cards for the current month */
 .month-title { font-family: var(--serif); font-weight: 400; font-size: 56px; margin: 4px 0 24px; }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; cursor: pointer; transition: border-color 0.12s; }
+.card:hover { border-color: var(--line-strong); }
 .card h3 { margin: 12px 0 6px; font-size: 21px; overflow-wrap: anywhere; }
 .desc { margin: 0 0 14px; color: #3b4542; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
 .badges { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -139,8 +141,10 @@ dialog {
 }
 dialog::backdrop { background: rgba(20, 26, 24, 0.55); }
 .dlg { position: relative; padding: 28px 32px; }
-.dlg h2 { font-family: var(--serif); font-weight: 400; font-size: 34px; margin: 0 48px 14px 0; }
+.dlg h2 { font-family: var(--serif); font-weight: 400; font-size: 34px; margin: 0 48px 14px 0; overflow-wrap: anywhere; }
 .close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; padding: 0; font-size: 26px; line-height: 1; }
+.dlg .desc { margin-top: 16px; }
+.repeat { color: var(--muted); font-size: 14px; margin: 16px 0 0; }
 .dlg-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
 
 /* Form */

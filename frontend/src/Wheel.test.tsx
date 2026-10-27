@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Todo } from './storage.ts'
 import Wheel from './Wheel.tsx'
 import { dayAngle } from './wheelGeometry.ts'
@@ -191,5 +191,26 @@ describe('Wheel, prikker', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('Dekkskift')
     fireEvent.mouseLeave(dot)
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('sender id-en til gjøremålet når en prikk klikkes', () => {
+    const onOpenTodo = vi.fn()
+    render(<Wheel today={new Date(2026, 9, 26)} todos={TODOS} onOpenTodo={onOpenTodo} />)
+    const dots = screen.getAllByTestId('prikk')
+    // The dots come in the order of the todos and their dates
+    const owners = TODOS.flatMap((item) => item.dates.map(() => item.id))
+    dots.forEach((dot, i) => {
+      fireEvent.click(dot)
+      expect(onOpenTodo).toHaveBeenLastCalledWith(owners[i])
+    })
+    expect(onOpenTodo).toHaveBeenCalledTimes(6)
+  })
+
+  it('kan klikkes uten at noen lytter', () => {
+    const [dot] = renderDots(TODOS)
+    if (!dot) throw new Error('Fant ingen prikk')
+    expect(() => {
+      fireEvent.click(dot)
+    }).not.toThrow()
   })
 })

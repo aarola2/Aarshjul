@@ -1,15 +1,17 @@
-import { type MonthItem, shortDate, todosInMonth } from './monthList.ts'
-import type { Todo, TodoDate } from './storage.ts'
-import { MONTHS, type Season } from './wheelGeometry.ts'
+import DateBadge from './DateBadge.tsx'
+import { type MonthItem, todosInMonth } from './monthList.ts'
+import type { Todo } from './storage.ts'
+import { MONTHS } from './wheelGeometry.ts'
 
 interface MonthColumnProps {
   today: Date
   todos: readonly Todo[]
+  onOpenTodo?: (id: string) => void
 }
 
 const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
-export default function MonthColumn({ today, todos }: MonthColumnProps) {
+export default function MonthColumn({ today, todos, onOpenTodo }: MonthColumnProps) {
   const month = MONTHS[today.getMonth()]
   // getMonth() is always 0–11; the check is only there for the type
   if (!month) return null
@@ -18,7 +20,14 @@ export default function MonthColumn({ today, todos }: MonthColumnProps) {
       <p className="eyebrow">Denne måneden</p>
       <h2 className="month-title">{capitalise(month.name)}</h2>
       {todosInMonth(todos, month.number).map((item) => (
-        <MonthCard key={item.todo.id} item={item} season={month.season} today={today.getDate()} />
+        <MonthCard
+          key={item.todo.id}
+          item={item}
+          today={today}
+          onOpen={() => {
+            onOpenTodo?.(item.todo.id)
+          }}
+        />
       ))}
     </>
   )
@@ -26,34 +35,21 @@ export default function MonthColumn({ today, todos }: MonthColumnProps) {
 
 interface MonthCardProps {
   item: MonthItem
-  season: Season
-  today: number
+  today: Date
+  onOpen: () => void
 }
 
-function MonthCard({ item: { todo, dates }, season, today }: MonthCardProps) {
+// The whole card can be clicked. Keyboard access to it comes in #22.
+function MonthCard({ item: { todo, dates }, today, onOpen }: MonthCardProps) {
   return (
-    <article className="card">
+    <article className="card" onClick={onOpen}>
       <div className="badges">
         {dates.map((date) => (
-          <DateBadge key={date.day} date={date} season={season} isToday={date.day === today} />
+          <DateBadge key={date.day} date={date} today={today} />
         ))}
       </div>
       <h3>{todo.title}</h3>
       {todo.description !== '' && <p className="desc">{todo.description}</p>}
     </article>
-  )
-}
-
-interface DateBadgeProps {
-  date: TodoDate
-  season: Season
-  isToday: boolean
-}
-
-function DateBadge({ date, season, isToday }: DateBadgeProps) {
-  return (
-    <span className={`badge ${season}${isToday ? ' today' : ''}`}>
-      {isToday ? `I dag · ${shortDate(date)}` : shortDate(date)}
-    </span>
   )
 }

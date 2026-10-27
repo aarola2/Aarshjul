@@ -4,6 +4,7 @@ import MonthColumn from './MonthColumn.tsx'
 import { loadTodos, saveTodos, type Todo } from './storage.ts'
 import { createTodo, type TodoDraft } from './todoForm.ts'
 import TodoFormDialog from './TodoFormDialog.tsx'
+import TodoViewDialog from './TodoViewDialog.tsx'
 import { useToday } from './useToday.ts'
 import Wheel from './Wheel.tsx'
 
@@ -15,6 +16,8 @@ export default function App() {
     return result.status === 'ok' ? result.todos : []
   })
   const [isFormOpen, setFormOpen] = useState(false)
+  const [viewingId, setViewingId] = useState<string | null>(null)
+  const viewing = todos.find((todo) => todo.id === viewingId)
 
   // Saved first, so the wheel and the column never show a todo that is not stored
   const addTodo = (draft: TodoDraft) => {
@@ -43,12 +46,21 @@ export default function App() {
       </header>
       <main className="layout">
         <section className="wheel-area" aria-label="Årshjul">
-          <Wheel today={today} todos={todos} />
+          <Wheel today={today} todos={todos} onOpenTodo={setViewingId} />
         </section>
         <aside className="month" aria-label="Denne måneden">
-          <MonthColumn today={today} todos={todos} />
+          <MonthColumn today={today} todos={todos} onOpenTodo={setViewingId} />
         </aside>
       </main>
+      {viewing && (
+        <TodoViewDialog
+          todo={viewing}
+          today={today}
+          onClose={() => {
+            setViewingId(null)
+          }}
+        />
+      )}
       {isFormOpen && (
         <TodoFormDialog
           onSave={addTodo}

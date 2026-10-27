@@ -1,6 +1,7 @@
 import { type SubmitEvent, useEffect, useId, useRef, useState } from 'react'
 import { MAX_DATES } from './storage.ts'
 import { type FormErrors, fromPickerValue, toPickerValue, type TodoDraft, validateForm } from './todoForm.ts'
+import { useModalDialog } from './useModalDialog.ts'
 
 interface TodoFormDialogProps {
   onSave: (draft: TodoDraft) => void
@@ -34,7 +35,7 @@ function firstInvalidField(errors: FormErrors): string | undefined {
 
 // The form is mounted when it opens and unmounted when it closes, so it always starts empty
 export default function TodoFormDialog({ onSave, onClose }: TodoFormDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null)
+  const dialogRef = useModalDialog()
   const formRef = useRef<HTMLFormElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
   const nextKey = useRef(1)
@@ -47,9 +48,6 @@ export default function TodoFormDialog({ onSave, onClose }: TodoFormDialogProps)
   const id = useId()
 
   useEffect(() => {
-    const dialog = dialogRef.current
-    // StrictMode runs the effect twice in development, and showModal() on an open dialog throws
-    if (dialog && !dialog.open) dialog.showModal()
     titleRef.current?.focus()
   }, [])
 
