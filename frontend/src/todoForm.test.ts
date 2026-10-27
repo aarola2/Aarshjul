@@ -74,7 +74,7 @@ describe('validateForm', () => {
     })
   })
 
-  it.each(['abc', '31.04', '15.13'])('avviser datoen «%s» med formatmeldingen', (date) => {
+  it.each(['abc', 'neste uke', '1510', '15.13', '0.10', '15,10'])('avviser datoen «%s» med formatmeldingen', (date) => {
     expect(validateForm(values('Dekkskift', date))).toEqual({ ok: false, errors: { ...noErrors, dates: [FORMAT_ERROR] } })
   })
 
@@ -92,6 +92,25 @@ describe('validateForm', () => {
       ok: false,
       errors: { ...noErrors, description: 'Beskrivelsen kan ha maks 500 tegn.' },
     })
+  })
+})
+
+describe('validateForm, datoer som ikke finnes', () => {
+  it.each([
+    ['31.04', '31. april finnes ikke i kalenderen.'],
+    ['30.02', '30. februar finnes ikke i kalenderen.'],
+    ['31/06', '31. juni finnes ikke i kalenderen.'],
+    ['32-01', '32. januar finnes ikke i kalenderen.'],
+  ])('avviser %s med «%s»', (date, message) => {
+    expect(validateForm(values('Dekkskift', date))).toEqual({ ok: false, errors: { ...noErrors, dates: [message] } })
+  })
+
+  it.each(['29.02', '29/2', '31.01', '30.04'])('godtar %s', (date) => {
+    expect(validateForm(values('Dekkskift', date)).ok).toBe(true)
+  })
+
+  it('lagrer 29. februar som 29. februar, uansett år', () => {
+    expect(validateForm(values('Skuddårsdugnad', '29.02'))).toMatchObject({ ok: true, draft: { dates: [{ month: 2, day: 29 }] } })
   })
 })
 

@@ -117,3 +117,26 @@ describe('TodoViewDialog', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 })
+
+describe('TodoViewDialog, 29. februar', () => {
+  const LEAP: Todo = { ...TODO, title: 'Skuddårsdugnad', dates: [{ month: 2, day: 29 }, { month: 5, day: 1 }] }
+  const HINT = '29. februar vises som 28. februar i år uten skuddår.'
+  const leapDialog = () => screen.getByRole('dialog', { name: 'Skuddårsdugnad' })
+
+  it('viser 29. februar som 28. februar og forklarer det i år uten skuddår', () => {
+    render(<TodoViewDialog todo={LEAP} today={new Date(2026, 9, 27)} onClose={vi.fn()} />)
+    expect(within(leapDialog()).getByText('28. feb')).toBeInTheDocument()
+    expect(within(leapDialog()).getByText(HINT)).toBeInTheDocument()
+  })
+
+  it('viser 29. februar uten forklaring i skuddår', () => {
+    render(<TodoViewDialog todo={LEAP} today={new Date(2028, 9, 27)} onClose={vi.fn()} />)
+    expect(within(leapDialog()).getByText('29. feb')).toBeInTheDocument()
+    expect(within(leapDialog()).queryByText(HINT)).toBeNull()
+  })
+
+  it('har ingen forklaring når gjøremålet ikke har 29. februar', () => {
+    render(<TodoViewDialog todo={TODO} today={new Date(2026, 9, 27)} onClose={vi.fn()} />)
+    expect(within(dialog()).queryByText(HINT)).toBeNull()
+  })
+})

@@ -18,6 +18,7 @@ import {
   R_NUMBER,
   R_OUTER,
   R_TODAY,
+  shownDay,
   tickLength,
 } from './wheelGeometry.ts'
 
@@ -86,8 +87,9 @@ export default function Wheel({ today, todos = NO_TODOS, onOpenTodo }: WheelProp
         </g>
         <TodayMarker today={today} />
         <Centre today={today} />
-        {dots.map(({ todo, date: { month, day }, radius }) => {
-          const [cx, cy] = pointOnCircle(radius, dayAngle(month, day, year))
+        {dots.map(({ todo, date, radius }) => {
+          const { month, day } = date
+          const [cx, cy] = pointOnCircle(radius, dayAngle(month, shownDay(date, year), year))
           return (
             <g
               key={`${todo.id}-${String(month)}-${String(day)}`}

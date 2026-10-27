@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DOT_SLOTS, hashId, MIN_DOT_GAP, placeDots, R_DOT_MAX, R_DOT_MIN } from './dotPlacement.ts'
 import type { Todo } from './storage.ts'
-import { dayAngle, dayOfYear, pointOnCircle } from './wheelGeometry.ts'
+import { dayAngle, dayOfYear, pointOnCircle, shownDay } from './wheelGeometry.ts'
 
 const todo = (id: string, ...dates: [number, number][]): Todo => ({
   id,
@@ -33,8 +33,9 @@ function random(seed: number) {
   }
 }
 
+// The day the dot is drawn on, so 29 February counts as 28 February in a year without it
 const position = (dot: { date: { month: number; day: number }; radius: number }, year = 2026) =>
-  `${String(dayOfYear(dot.date.month, dot.date.day, year))}:${String(dot.radius)}`
+  `${String(dayOfYear(dot.date.month, shownDay(dot.date, year), year))}:${String(dot.radius)}`
 
 const expectAllPositionsDifferent = (todos: readonly Todo[], year = 2026) => {
   const positions = placeDots(todos, year).map((dot) => position(dot, year))
@@ -200,10 +201,15 @@ describe('placeDots, nabodatoer og ytelse', () => {
     expect(byDate(backwards)).toEqual(byDate(forwards))
   })
 
-  it('29. februar og 1. mars i år uten skuddår deler linje, men aldri plass', () => {
-    const todos = [todo('a', [2, 29], [3, 1]), todo('b', [3, 1]), todo('c', [2, 29])]
+  it('29. februar og 28. februar i år uten skuddår deler linje, men aldri plass', () => {
+    const todos = [todo('a', [2, 29], [2, 28]), todo('b', [2, 28]), todo('c', [2, 29])]
     expectAllPositionsDifferent(todos, 2026)
     expect(placeDots(todos, 2026)).toHaveLength(4)
+  })
+
+  it('gir 29. og 28. februar hver sin plass i skuddår også', () => {
+    const todos = [todo('a', [2, 29], [2, 28]), todo('b', [2, 28]), todo('c', [2, 29])]
+    expectAllPositionsDifferent(todos, 2024)
   })
 
   it('plasserer 200 gjøremål med 12 datoer hver raskt', () => {

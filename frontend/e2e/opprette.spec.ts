@@ -125,7 +125,7 @@ test('ugyldig dato og for lang tekst gir melding, og ingenting lagres', async ({
   await expect(form(page).getByLabel('Tittel')).toHaveAccessibleDescription('Tittelen kan ha maks 60 tegn.')
   await expect(form(page).getByLabel('Beskrivelse (valgfri)')).toHaveAccessibleDescription('Beskrivelsen kan ha maks 500 tegn.')
   await expect(form(page).getByLabel('Dato 1', { exact: true })).toHaveAccessibleDescription(
-    /Skriv datoen som dd\.mm, for eksempel 15\.05\./,
+    /31\. april finnes ikke i kalenderen\./,
   )
   await expectNothingSaved(page)
 })

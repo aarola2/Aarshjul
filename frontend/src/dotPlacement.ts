@@ -1,5 +1,5 @@
 import type { Todo, TodoDate } from './storage.ts'
-import { angleOf, dayOfYear, daysInYear, pointOnCircle } from './wheelGeometry.ts'
+import { angleOf, dayOfYear, daysInYear, pointOnCircle, shownDay } from './wheelGeometry.ts'
 
 // Dots lie along the date line between these distances from the centre
 export const R_DOT_MIN = 140
@@ -55,7 +55,7 @@ export function placeDots(todos: readonly Todo[], year: number): PlacedDot[] {
   const days = daysInYear(year)
   const dots: Candidate[] = todos.flatMap((todo) =>
     todo.dates.map((date) => {
-      const dayIndex = dayOfYear(date.month, date.day, year)
+      const dayIndex = dayOfYear(date.month, shownDay(date, year), year)
       return { todo, date, radius: 0, dayIndex, angle: angleOf(dayIndex + 0.5, year), x: 0, y: 0 }
     }),
   )
