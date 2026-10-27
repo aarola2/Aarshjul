@@ -277,6 +277,22 @@ describe('TodoFormDialog, flere datoer', () => {
     expect(nthDate(2)).toHaveFocus()
   })
 
+  it('lar feilen følge feltet sitt når et felt over det fjernes', () => {
+    renderForm()
+    type(titleField(), 'Vårvask')
+    type(nthDate(1), '1.1')
+    addDate()
+    type(nthDate(2), '15.05')
+    addDate()
+    type(nthDate(3), '15/5')
+    save()
+    expect(nthDate(3)).toHaveAccessibleDescription('15. mai er allerede lagt inn på dette gjøremålet.')
+    removeDate(1)
+    expect(nthDate(2)).toHaveValue('15/5')
+    expect(nthDate(2)).toHaveAccessibleDescription('15. mai er allerede lagt inn på dette gjøremålet.')
+    expect(nthDate(1)).toHaveAttribute('aria-invalid', 'false')
+  })
+
   it('kobler «Minst én dato er påkrevd.» til alle de tomme datofeltene', () => {
     renderForm()
     type(titleField(), 'Vårvask')
