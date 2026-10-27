@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import ConfirmDeleteDialog from './ConfirmDeleteDialog.tsx'
+import CorruptDataAlert from './CorruptDataAlert.tsx'
 import MonthColumn from './MonthColumn.tsx'
-import { loadTodos, saveTodos, type Todo } from './storage.ts'
+import { keepCorruptCopy, loadTodos, saveTodos, type Todo } from './storage.ts'
 import { createTodo, removeTodo, type TodoDraft, updateTodo } from './todoForm.ts'
 import TodoFormDialog from './TodoFormDialog.tsx'
 import TodoViewDialog from './TodoViewDialog.tsx'
@@ -13,11 +14,14 @@ type FormState = { kind: 'new' } | { kind: 'edit'; id: string } | null
 
 export default function App() {
   const today = useToday()
-  // Corrupt data gives an empty list; the message about it comes in #19
-  const [todos, setTodos] = useState<Todo[]>(() => {
-    const result = loadTodos()
-    return result.status === 'ok' ? result.todos : []
-  })
+  // Read once at start. Corrupt data gives an empty list, a copy kept aside and a warning.
+  const [loaded] = useState(loadTodos)
+  const [todos, setTodos] = useState<Todo[]>(loaded.status === 'ok' ? loaded.todos : [])
+  const [corruptRaw, setCorruptRaw] = useState(loaded.status === 'corrupt' ? loaded.raw : null)
+  // Kept before anything can be saved over the corrupt data
+  useEffect(() => {
+    if (loaded.status === 'corrupt') keepCorruptCopy(loaded.raw)
+  }, [loaded])
   const [form, setForm] = useState<FormState>(null)
   const [viewingId, setViewingId] = useState<string | null>(null)
   const viewing = todos.find((todo) => todo.id === viewingId)
@@ -70,6 +74,14 @@ export default function App() {
           + Legg til nytt gjøremål
         </button>
       </header>
+      {corruptRaw !== null && (
+        <CorruptDataAlert
+          raw={corruptRaw}
+          onClose={() => {
+            setCorruptRaw(null)
+          }}
+        />
+      )}
       <main className="layout">
         <section className="wheel-area" aria-label="Årshjul">
           <Wheel today={today} todos={todos} onOpenTodo={setViewingId} />

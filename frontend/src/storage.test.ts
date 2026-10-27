@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { loadTodos, saveTodos, STORAGE_KEY, type Todo } from './storage.ts'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { CORRUPT_COPY_KEY, keepCorruptCopy, loadTodos, saveTodos, STORAGE_KEY, type Todo } from './storage.ts'
 
 const validTodo = (overrides: Partial<Todo> = {}): Todo => ({
   id: 'a1',
@@ -20,7 +20,7 @@ const storeTodo = (todo: Record<string, unknown>) => {
 
 const expectCorrupt = () => {
   const before = localStorage.getItem(STORAGE_KEY)
-  expect(loadTodos()).toEqual({ status: 'corrupt' })
+  expect(loadTodos()).toEqual({ status: 'corrupt', raw: before })
   expect(localStorage.getItem(STORAGE_KEY)).toBe(before)
 }
 
@@ -163,5 +163,39 @@ describe('loadTodos ved grenseverdiene', () => {
     const todo = validTodo({ dates: [{ month: 5, day: 15 }, { month: 6, day: 15 }] })
     saveTodos([todo])
     expect(loadTodos()).toEqual({ status: 'ok', todos: [todo] })
+  })
+})
+
+describe('keepCorruptCopy', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('bruker en egen nøkkel med prosjektnavn og versjon', () => {
+    expect(CORRUPT_COPY_KEY).toBe('aarhjul:v1:corrupt-copy')
+    expect(CORRUPT_COPY_KEY).not.toBe(STORAGE_KEY)
+  })
+
+  it('tar vare på teksten nøyaktig som den var', () => {
+    const raw = '[{"id": "a1", "tittel": <b>ødelagt</b>'
+    expect(keepCorruptCopy(raw)).toBe(true)
+    expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBe(raw)
+  })
+
+  it('overskrives ikke når brukeren lagrer noe nytt', () => {
+    storeRaw('[{"id":')
+    const result = loadTodos()
+    if (result.status !== 'corrupt') throw new Error('Forventet ødelagte data')
+    keepCorruptCopy(result.raw)
+    saveTodos([validTodo()])
+    expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBe('[{"id":')
+    expect(loadTodos()).toEqual({ status: 'ok', todos: [validTodo()] })
+  })
+
+  it('krasjer ikke når lagringen er full, men sier fra', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Full', 'QuotaExceededError')
+    })
+    expect(keepCorruptCopy('[{"id":')).toBe(false)
   })
 })
