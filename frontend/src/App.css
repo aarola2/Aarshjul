@@ -122,6 +122,8 @@ body {
 }
 .btn.primary { background: var(--text); color: #ffffff; }
 .btn.secondary { border-color: var(--text); }
+.btn.dashed { border: 2px dashed #9aa19d; }
+.btn.link { padding: 6px 10px; text-decoration: underline; }
 .btn.icon { padding: 8px 10px; border-color: #cfc6b4; border-width: 1.5px; border-radius: 10px; line-height: 0; }
 .btn:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
 
@@ -161,6 +163,8 @@ textarea { resize: vertical; }
 fieldset { border: 0; padding: 0; min-width: 0; }
 fieldset legend { padding: 0; }
 .hint { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+.date-list { list-style: none; padding: 0; margin: 0 0 10px; }
+.date-row { margin-bottom: 8px; }
 .date-line { position: relative; display: flex; gap: 8px; align-items: center; }
 .date-line input[type="text"] { width: 120px; }
 .picker { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

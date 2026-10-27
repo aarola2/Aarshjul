@@ -4,7 +4,9 @@ import { createTodo, fromPickerValue, parseDate, toPickerValue, validateForm } f
 
 const FORMAT_ERROR = 'Skriv datoen som dd.mm, for eksempel 15.05.'
 
-const values = (title: string, date: string, description = '') => ({ title, description, date })
+const values = (title: string, date: string, description = '') => ({ title, description, dates: [date] })
+const withDates = (...dates: string[]) => ({ title: 'Dekkskift', description: '', dates })
+const noErrors = { title: undefined, description: undefined, dates: [undefined], group: undefined }
 
 const existing = (id: string): Todo => ({
   id,
@@ -46,29 +48,32 @@ describe('validateForm', () => {
   })
 
   it.each(['', '   '])('krever tittel («%s»)', (title) => {
-    expect(validateForm(values(title, '15.10'))).toEqual({ ok: false, errors: { title: 'Tittel er påkrevd.' } })
+    expect(validateForm(values(title, '15.10'))).toEqual({ ok: false, errors: { ...noErrors, title: 'Tittel er påkrevd.' } })
   })
 
   it.each(['', '   '])('krever dato («%s»)', (date) => {
-    expect(validateForm(values('Dekkskift', date))).toEqual({ ok: false, errors: { date: 'Minst én dato er påkrevd.' } })
+    expect(validateForm(values('Dekkskift', date))).toEqual({
+      ok: false,
+      errors: { ...noErrors, group: 'Minst én dato er påkrevd.' },
+    })
   })
 
   it('viser begge feilene når både tittel og dato mangler', () => {
     expect(validateForm(values('', ''))).toEqual({
       ok: false,
-      errors: { title: 'Tittel er påkrevd.', date: 'Minst én dato er påkrevd.' },
+      errors: { ...noErrors, title: 'Tittel er påkrevd.', group: 'Minst én dato er påkrevd.' },
     })
   })
 
   it.each(['abc', '31.04', '15.13'])('avviser datoen «%s» med formatmeldingen', (date) => {
-    expect(validateForm(values('Dekkskift', date))).toEqual({ ok: false, errors: { date: FORMAT_ERROR } })
+    expect(validateForm(values('Dekkskift', date))).toEqual({ ok: false, errors: { ...noErrors, dates: [FORMAT_ERROR] } })
   })
 
   it('godtar tittel på 60 tegn og avviser 61, målt etter trimming', () => {
     expect(validateForm(values(` ${'a'.repeat(60)} `, '15.10')).ok).toBe(true)
     expect(validateForm(values('a'.repeat(61), '15.10'))).toEqual({
       ok: false,
-      errors: { title: 'Tittelen kan ha maks 60 tegn.' },
+      errors: { ...noErrors, title: 'Tittelen kan ha maks 60 tegn.' },
     })
   })
 
@@ -76,8 +81,73 @@ describe('validateForm', () => {
     expect(validateForm(values('Dekkskift', '15.10', 'b'.repeat(500))).ok).toBe(true)
     expect(validateForm(values('Dekkskift', '15.10', 'b'.repeat(501)))).toEqual({
       ok: false,
-      errors: { description: 'Beskrivelsen kan ha maks 500 tegn.' },
+      errors: { ...noErrors, description: 'Beskrivelsen kan ha maks 500 tegn.' },
     })
+  })
+})
+
+describe('validateForm, flere datoer', () => {
+  it('gir alle datoene i rekkefølgen de er skrevet inn', () => {
+    expect(validateForm(withDates('20.10', '3/10', '1-5'))).toMatchObject({
+      ok: true,
+      draft: { dates: [{ month: 10, day: 20 }, { month: 10, day: 3 }, { month: 5, day: 1 }] },
+    })
+  })
+
+  it('ser bort fra tomme datofelt', () => {
+    expect(validateForm(withDates('', '15.10', '  '))).toMatchObject({ ok: true, draft: { dates: [{ month: 10, day: 15 }] } })
+  })
+
+  it('krever minst én dato også når det er flere tomme felt', () => {
+    expect(validateForm(withDates('', ' ', ''))).toEqual({
+      ok: false,
+      errors: { ...noErrors, dates: [undefined, undefined, undefined], group: 'Minst én dato er påkrevd.' },
+    })
+  })
+
+  it.each([
+    ['15.05', '15.05', '15. mai'],
+    ['15.05', '15/5', '15. mai'],
+    ['1.1', '01-01', '1. januar'],
+  ])('avviser %s og %s som samme dato ved det siste feltet', (first, second, name) => {
+    expect(validateForm(withDates(first, second))).toEqual({
+      ok: false,
+      errors: { ...noErrors, dates: [undefined, `${name} er allerede lagt inn på dette gjøremålet.`] },
+    })
+  })
+
+  it('melder hvert duplikat og hver ugyldige dato ved sitt eget felt', () => {
+    expect(validateForm(withDates('15.05', 'abc', '15.05', '1.6', '15.5'))).toMatchObject({
+      ok: false,
+      errors: {
+        dates: [
+          undefined,
+          FORMAT_ERROR,
+          '15. mai er allerede lagt inn på dette gjøremålet.',
+          undefined,
+          '15. mai er allerede lagt inn på dette gjøremålet.',
+        ],
+        group: undefined,
+      },
+    })
+  })
+
+  it('godtar like dag i ulike måneder', () => {
+    expect(validateForm(withDates('15.05', '15.06')).ok).toBe(true)
+  })
+
+  it('godtar 12 datoer og avviser 13', () => {
+    const twelve = Array.from({ length: 12 }, (_, i) => `1.${String(i + 1)}`)
+    expect(validateForm(withDates(...twelve)).ok).toBe(true)
+    expect(validateForm(withDates(...twelve, '2.1'))).toMatchObject({
+      ok: false,
+      errors: { group: 'Maks 12 datoer per gjøremål.' },
+    })
+  })
+
+  it('teller ikke tomme felt mot grensen på 12', () => {
+    const twelve = Array.from({ length: 12 }, (_, i) => `1.${String(i + 1)}`)
+    expect(validateForm(withDates(...twelve, '')).ok).toBe(true)
   })
 })
 

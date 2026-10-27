@@ -165,6 +165,21 @@ describe('App, nytt gjøremål', () => {
     expect(screen.queryAllByTestId('prikk')).toHaveLength(0)
   })
 
+  it('lagrer et gjøremål med to datoer som to prikker og ett kort', () => {
+    render(<App />)
+    openForm()
+    fill('Rense takrennene', '3.10')
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til ekstra dato' }))
+    fireEvent.change(screen.getByLabelText('Dato 2'), { target: { value: '20.10' } })
+    save()
+    expect(screen.getAllByTestId('prikk')).toHaveLength(2)
+    const cards = within(column()).getAllByRole('article')
+    expect(cards).toHaveLength(1)
+    expect(cards[0]).toHaveTextContent('3. okt20. okt')
+    const stored = loadTodos()
+    expect(stored.status === 'ok' && stored.todos[0]?.dates).toEqual([{ month: 10, day: 3 }, { month: 10, day: 20 }])
+  })
+
   it('«Avbryt» lukker uten å lagre, og skjemaet er tomt neste gang', () => {
     render(<App />)
     openForm()
