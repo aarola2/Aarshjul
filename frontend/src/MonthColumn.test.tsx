@@ -195,6 +195,13 @@ describe('MonthColumn, tomtilstand', () => {
     expect(screen.getByText(`Gjøremål med en dato i ${month} dukker opp her.`)).toBeInTheDocument()
   })
 
+  it('har forklaringen under «Ingen oppgaver denne måneden»', () => {
+    renderColumn(TODAY, [])
+    const title = screen.getByText(EMPTY_TITLE)
+    const explanation = screen.getByText('Gjøremål med en dato i oktober dukker opp her.')
+    expect(title.compareDocumentPosition(explanation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('viser ikke tomtilstanden når måneden har et gjøremål', () => {
     renderColumn()
     expect(screen.queryByText(EMPTY_TITLE)).toBeNull()
