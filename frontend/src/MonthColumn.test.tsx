@@ -113,3 +113,27 @@ describe('MonthColumn, klikk på kort', () => {
     }).not.toThrow()
   })
 })
+
+describe('MonthColumn, rediger', () => {
+  it('har «Rediger» på hvert kort, med tittelen i navnet', () => {
+    renderColumn()
+    expect(within(cardTitled('Dekkskift')).getByRole('button', { name: 'Rediger «Dekkskift»' })).toHaveTextContent('Rediger')
+    expect(screen.getAllByRole('button', { name: /^Rediger/ })).toHaveLength(3)
+  })
+
+  it('«Rediger» ber om å redigere, uten å åpne visningen av kortet', () => {
+    const onOpenTodo = vi.fn()
+    const onEditTodo = vi.fn()
+    render(<MonthColumn today={TODAY} todos={TODOS} onOpenTodo={onOpenTodo} onEditTodo={onEditTodo} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Rediger «Rense takrennene»' }))
+    expect(onEditTodo).toHaveBeenCalledExactlyOnceWith('c3')
+    expect(onOpenTodo).not.toHaveBeenCalled()
+  })
+
+  it('kan klikkes uten at noen lytter', () => {
+    renderColumn()
+    expect(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    }).not.toThrow()
+  })
+})

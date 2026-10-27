@@ -63,6 +63,7 @@ body {
 .card:hover { border-color: var(--line-strong); }
 .card h3 { margin: 12px 0 6px; font-size: 21px; overflow-wrap: anywhere; }
 .desc { margin: 0 0 14px; color: #3b4542; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.actions { display: flex; gap: 12px; align-items: center; margin-top: 14px; }
 .badges { display: flex; flex-wrap: wrap; gap: 6px; }
 .badge { border-radius: 999px; padding: 4px 12px; font-weight: 600; font-size: 14px; border: 2px solid transparent; }
 .badge.winter { background: var(--winter); color: var(--winter-text); }

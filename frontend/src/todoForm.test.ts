@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { loadTodos, saveTodos, type Todo } from './storage.ts'
-import { createTodo, fromPickerValue, parseDate, toPickerValue, validateForm } from './todoForm.ts'
+import { createTodo, formatDate, fromPickerValue, parseDate, toPickerValue, updateTodo, validateForm } from './todoForm.ts'
 
 const FORMAT_ERROR = 'Skriv datoen som dd.mm, for eksempel 15.05.'
 
@@ -198,5 +198,48 @@ describe('datovelgeren', () => {
   it('gjør verdien fra velgeren om til dd.mm', () => {
     expect(fromPickerValue('2026-10-05')).toBe('05.10')
     expect(fromPickerValue('')).toBe('')
+  })
+})
+
+describe('formatDate', () => {
+  it.each([
+    [5, 1, '01.05'],
+    [10, 15, '15.10'],
+    [2, 29, '29.02'],
+  ])('viser %i/%i som «%s», som kan leses inn igjen', (month, day, text) => {
+    expect(formatDate({ month, day })).toBe(text)
+    expect(parseDate(text)).toEqual({ month, day })
+  })
+})
+
+describe('updateTodo', () => {
+  const todos: Todo[] = [existing('a1'), { ...existing('b2'), title: 'Dekkskift' }, existing('c3')]
+  const draft = { title: 'Dekkskift, vinter', description: 'Piggfritt.', dates: [{ month: 11, day: 1 }] }
+
+  it('bytter tittel, beskrivelse og datoer, og beholder id, tidspunkt og plass', () => {
+    const next = updateTodo(todos, 'b2', draft)
+    expect(next).toEqual([todos[0], { id: 'b2', ...draft, createdAt: '2026-01-02T09:00:00.000Z' }, todos[2]])
+  })
+
+  it('lar de andre gjøremålene være de samme objektene', () => {
+    const next = updateTodo(todos, 'b2', draft)
+    expect(next[0]).toBe(todos[0])
+    expect(next[2]).toBe(todos[2])
+  })
+
+  it('endrer ikke listen den får', () => {
+    const before = structuredClone(todos)
+    updateTodo(todos, 'b2', draft)
+    expect(todos).toEqual(before)
+  })
+
+  it('gir samme innhold når id-en ikke finnes', () => {
+    expect(updateTodo(todos, 'finnes-ikke', draft)).toEqual(todos)
+  })
+
+  it('gir et gjøremål som lagringen godtar ved neste innlasting', () => {
+    saveTodos(updateTodo(todos, 'b2', draft))
+    expect(loadTodos()).toMatchObject({ status: 'ok', todos: [{ id: 'a1' }, { id: 'b2', title: 'Dekkskift, vinter' }, { id: 'c3' }] })
+    localStorage.clear()
   })
 })

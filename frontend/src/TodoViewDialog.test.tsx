@@ -71,9 +71,17 @@ describe('TodoViewDialog', () => {
     expect(within(dialog()).getByText('↻ Gjentas automatisk hvert år')).toBeInTheDocument()
   })
 
-  it('har ikke Rediger og Slett ennå', () => {
+  it('har Rediger, men ikke Slett ennå', () => {
     renderView()
-    expect(within(dialog()).getAllByRole('button')).toHaveLength(1)
+    expect(within(dialog()).getAllByRole('button').map((button) => button.textContent)).toEqual(['×', 'Rediger'])
+  })
+
+  it('«Rediger» ber om å redigere gjøremålet', () => {
+    const onEdit = vi.fn()
+    const onClose = vi.fn()
+    render(<TodoViewDialog todo={TODO} today={new Date(2026, 9, 27)} onClose={onClose} onEdit={onEdit} />)
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Rediger' }))
+    expect(onEdit).toHaveBeenCalledExactlyOnceWith('c3')
   })
 
   it('lukkes med lukkeknappen', () => {

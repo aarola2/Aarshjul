@@ -254,3 +254,111 @@ describe('App, vise et gjøremål', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe(before)
   })
 })
+
+describe('App, rediger', () => {
+  const TODOS = [
+    {
+      id: 'c3',
+      title: 'Rense takrennene',
+      description: 'Begge sider av huset.',
+      dates: [{ month: 10, day: 3 }, { month: 3, day: 20 }],
+      createdAt: '2026-01-02T09:00:00.000Z',
+    },
+    { id: 'a1', title: 'Dekkskift', description: '', dates: [{ month: 10, day: 15 }], createdAt: '2026-02-03T10:00:00.000Z' },
+  ]
+
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(TODOS))
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const column = () => screen.getByRole('complementary', { name: 'Denne måneden' })
+  const editForm = () => screen.getByRole('dialog', { name: 'Rediger gjøremål' })
+  const save = () => {
+    fireEvent.click(within(editForm()).getByRole('button', { name: 'Lagre' }))
+  }
+  const stored = () => {
+    const result = loadTodos()
+    if (result.status !== 'ok') throw new Error('Lagringen kunne ikke leses')
+    return result.todos
+  }
+
+  it('«Rediger» på kortet åpner skjemaet utfylt, uten visningen', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Rediger «Rense takrennene»' }))
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(within(editForm()).getByLabelText('Tittel')).toHaveValue('Rense takrennene')
+    expect(within(editForm()).getByLabelText('Dato 1')).toHaveValue('20.03')
+    expect(within(editForm()).getByLabelText('Dato 2')).toHaveValue('03.10')
+  })
+
+  it('«Rediger» i dialogen lukker visningen og åpner skjemaet utfylt', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getAllByRole('article')[0] ?? column())
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Rense takrennene' })).getByRole('button', { name: 'Rediger' }))
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(within(editForm()).getByLabelText(/Beskrivelse/)).toHaveValue('Begge sider av huset.')
+  })
+
+  it('«Lagre» oppdaterer lagringen, hjulet og sidekolonnen, og beholder id og tidspunkt', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    fireEvent.change(within(editForm()).getByLabelText('Tittel'), { target: { value: 'Dekkskift til vinter' } })
+    fireEvent.click(within(editForm()).getByRole('button', { name: '+ Legg til ekstra dato' }))
+    fireEvent.change(within(editForm()).getByLabelText('Dato 2'), { target: { value: '1.4' } })
+    save()
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(stored()).toEqual([
+      TODOS[0],
+      { ...TODOS[1], title: 'Dekkskift til vinter', dates: [{ month: 10, day: 15 }, { month: 4, day: 1 }] },
+    ])
+    expect(screen.getAllByTestId('prikk')).toHaveLength(4)
+    expect(within(column()).getByRole('heading', { level: 3, name: 'Dekkskift til vinter' })).toBeInTheDocument()
+    expect(within(column()).queryByRole('heading', { level: 3, name: 'Dekkskift' })).toBeNull()
+  })
+
+  it('lagrer ingenting når reglene brytes', () => {
+    render(<App />)
+    const before = localStorage.getItem(STORAGE_KEY)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    fireEvent.change(within(editForm()).getByLabelText('Tittel'), { target: { value: ' ' } })
+    save()
+    expect(within(editForm()).getByText('Tittel er påkrevd.')).toBeInTheDocument()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(before)
+  })
+
+  it('«Avbryt» lukker uten endringer', () => {
+    render(<App />)
+    const before = localStorage.getItem(STORAGE_KEY)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    fireEvent.change(within(editForm()).getByLabelText('Tittel'), { target: { value: 'Noe annet' } })
+    fireEvent.click(within(editForm()).getByRole('button', { name: 'Avbryt' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(before)
+    expect(within(column()).getByRole('heading', { level: 3, name: 'Dekkskift' })).toBeInTheDocument()
+  })
+
+  it('blander ikke nytt gjøremål med et lagret gjøremål som har id-en «new»', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([{ ...TODOS[1], id: 'new' }]))
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).getByLabelText('Tittel')).toHaveValue('')
+  })
+
+  it('gir et tomt skjema for nytt gjøremål etter en redigering', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    save()
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    const form = screen.getByRole('dialog', { name: 'Nytt gjøremål' })
+    expect(within(form).getByLabelText('Tittel')).toHaveValue('')
+    expect(stored()).toHaveLength(2)
+  })
+})

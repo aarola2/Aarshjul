@@ -6,11 +6,12 @@ interface TodoViewDialogProps {
   todo: Todo
   today: Date
   onClose: () => void
+  onEdit?: (id: string) => void
 }
 
 const byCalendar = (a: TodoDate, b: TodoDate) => a.month - b.month || a.day - b.day
 
-export default function TodoViewDialog({ todo, today, onClose }: TodoViewDialogProps) {
+export default function TodoViewDialog({ todo, today, onClose, onEdit }: TodoViewDialogProps) {
   const dialogRef = useModalDialog()
   return (
     <dialog
@@ -34,6 +35,17 @@ export default function TodoViewDialog({ todo, today, onClose }: TodoViewDialogP
         </div>
         {todo.description !== '' && <p className="desc">{todo.description}</p>}
         <p className="repeat">↻ Gjentas automatisk hvert år</p>
+        <div className="dlg-actions">
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => {
+              onEdit?.(todo.id)
+            }}
+          >
+            Rediger
+          </button>
+        </div>
       </div>
     </dialog>
   )

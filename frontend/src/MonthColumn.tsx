@@ -7,11 +7,12 @@ interface MonthColumnProps {
   today: Date
   todos: readonly Todo[]
   onOpenTodo?: (id: string) => void
+  onEditTodo?: (id: string) => void
 }
 
 const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
-export default function MonthColumn({ today, todos, onOpenTodo }: MonthColumnProps) {
+export default function MonthColumn({ today, todos, onOpenTodo, onEditTodo }: MonthColumnProps) {
   const month = MONTHS[today.getMonth()]
   // getMonth() is always 0–11; the check is only there for the type
   if (!month) return null
@@ -27,6 +28,9 @@ export default function MonthColumn({ today, todos, onOpenTodo }: MonthColumnPro
           onOpen={() => {
             onOpenTodo?.(item.todo.id)
           }}
+          onEdit={() => {
+            onEditTodo?.(item.todo.id)
+          }}
         />
       ))}
     </>
@@ -37,10 +41,11 @@ interface MonthCardProps {
   item: MonthItem
   today: Date
   onOpen: () => void
+  onEdit: () => void
 }
 
 // The whole card can be clicked. Keyboard access to it comes in #22.
-function MonthCard({ item: { todo, dates }, today, onOpen }: MonthCardProps) {
+function MonthCard({ item: { todo, dates }, today, onOpen, onEdit }: MonthCardProps) {
   return (
     <article className="card" onClick={onOpen}>
       <div className="badges">
@@ -50,6 +55,20 @@ function MonthCard({ item: { todo, dates }, today, onOpen }: MonthCardProps) {
       </div>
       <h3>{todo.title}</h3>
       {todo.description !== '' && <p className="desc">{todo.description}</p>}
+      <div className="actions">
+        <button
+          type="button"
+          className="btn secondary"
+          aria-label={`Rediger «${todo.title}»`}
+          onClick={(event) => {
+            // Otherwise the click also reaches the card and opens the view
+            event.stopPropagation()
+            onEdit()
+          }}
+        >
+          Rediger
+        </button>
+      </div>
     </article>
   )
 }

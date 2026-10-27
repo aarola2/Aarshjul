@@ -116,3 +116,11 @@ export function fromPickerValue(value: string): string {
   const [, month, day] = value.split('-')
   return month && day ? `${day}.${month}` : ''
 }
+
+// The form shows stored dates as dd.mm, which parseDate reads back unchanged
+export const formatDate = (date: TodoDate) => `${pad(date.day)}.${pad(date.month)}`
+
+// The todo keeps its id, createdAt and place in the list; the others are left as they are
+export function updateTodo(todos: readonly Todo[], id: string, draft: TodoDraft): Todo[] {
+  return todos.map((todo) => (todo.id === id ? { ...todo, ...draft } : todo))
+}
