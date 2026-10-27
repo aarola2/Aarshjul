@@ -1,0 +1,132 @@
+import { describe, expect, it } from 'vitest'
+import { loadTodos, saveTodos, type Todo } from './storage.ts'
+import { createTodo, fromPickerValue, parseDate, toPickerValue, validateForm } from './todoForm.ts'
+
+const FORMAT_ERROR = 'Skriv datoen som dd.mm, for eksempel 15.05.'
+
+const values = (title: string, date: string, description = '') => ({ title, description, date })
+
+const existing = (id: string): Todo => ({
+  id,
+  title: 'Finnes fra før',
+  description: '',
+  dates: [{ month: 1, day: 1 }],
+  createdAt: '2026-01-02T09:00:00.000Z',
+})
+
+describe('parseDate', () => {
+  it.each([
+    ['15.10', 10, 15],
+    ['15/10', 10, 15],
+    ['15-10', 10, 15],
+    ['05.03', 3, 5],
+    ['5.3', 3, 5],
+    [' 15 . 10 ', 10, 15],
+    ['15.10.', 10, 15],
+    ['31.12', 12, 31],
+    ['29.02', 2, 29],
+  ])('tolker «%s» som %i/%i', (text, month, day) => {
+    expect(parseDate(text)).toEqual({ month, day })
+  })
+
+  it.each(['', 'abc', 'neste uke', '1510', '15.10.2026', '15,10', '0.10', '15.0', '15.13', '31.04', '30.02', '32.01', '-1.05'])(
+    'avviser «%s»',
+    (text) => {
+      expect(parseDate(text)).toBeNull()
+    },
+  )
+})
+
+describe('validateForm', () => {
+  it('gir utkast med trimmet tittel og beskrivelse og én dato', () => {
+    expect(validateForm(values('  Dekkskift ', ' 15.10 ', '  Bytt dekk.  '))).toEqual({
+      ok: true,
+      draft: { title: 'Dekkskift', description: 'Bytt dekk.', dates: [{ month: 10, day: 15 }] },
+    })
+  })
+
+  it.each(['', '   '])('krever tittel («%s»)', (title) => {
+    expect(validateForm(values(title, '15.10'))).toEqual({ ok: false, errors: { title: 'Tittel er påkrevd.' } })
+  })
+
+  it.each(['', '   '])('krever dato («%s»)', (date) => {
+    expect(validateForm(values('Dekkskift', date))).toEqual({ ok: false, errors: { date: 'Minst én dato er påkrevd.' } })
+  })
+
+  it('viser begge feilene når både tittel og dato mangler', () => {
+    expect(validateForm(values('', ''))).toEqual({
+      ok: false,
+      errors: { title: 'Tittel er påkrevd.', date: 'Minst én dato er påkrevd.' },
+    })
+  })
+
+  it.each(['abc', '31.04', '15.13'])('avviser datoen «%s» med formatmeldingen', (date) => {
+    expect(validateForm(values('Dekkskift', date))).toEqual({ ok: false, errors: { date: FORMAT_ERROR } })
+  })
+
+  it('godtar tittel på 60 tegn og avviser 61, målt etter trimming', () => {
+    expect(validateForm(values(` ${'a'.repeat(60)} `, '15.10')).ok).toBe(true)
+    expect(validateForm(values('a'.repeat(61), '15.10'))).toEqual({
+      ok: false,
+      errors: { title: 'Tittelen kan ha maks 60 tegn.' },
+    })
+  })
+
+  it('godtar beskrivelse på 500 tegn og avviser 501', () => {
+    expect(validateForm(values('Dekkskift', '15.10', 'b'.repeat(500))).ok).toBe(true)
+    expect(validateForm(values('Dekkskift', '15.10', 'b'.repeat(501)))).toEqual({
+      ok: false,
+      errors: { description: 'Beskrivelsen kan ha maks 500 tegn.' },
+    })
+  })
+})
+
+describe('createTodo', () => {
+  const draft = { title: 'Dekkskift', description: '', dates: [{ month: 10, day: 15 }] }
+  const now = new Date('2026-10-27T08:30:00.000Z')
+
+  it('lager gjøremålet med ny id og tidspunktet det ble opprettet', () => {
+    expect(createTodo(draft, [], now, () => 'ny-id')).toEqual({ id: 'ny-id', ...draft, createdAt: '2026-10-27T08:30:00.000Z' })
+  })
+
+  it('lager ny id hvis den første kolliderer med et gjøremål som finnes', () => {
+    const ids = ['b2', 'a1', 'c3']
+    const todo = createTodo(draft, [existing('a1'), existing('b2')], now, () => ids.shift() ?? '')
+    expect(todo.id).toBe('c3')
+  })
+
+  it('kan bruke id-en til et slettet gjøremål på nytt uten kollisjon', () => {
+    // a1 was deleted, so only b2 is left
+    expect(createTodo(draft, [existing('b2')], now, () => 'a1').id).toBe('a1')
+  })
+
+  it('gir unike id-er med nettleserens generator, også mot eksisterende', () => {
+    const todos: Todo[] = [existing('a1')]
+    for (let i = 0; i < 50; i++) todos.push(createTodo(draft, todos, now))
+    expect(new Set(todos.map((todo) => todo.id)).size).toBe(51)
+  })
+
+  it('gir et gjøremål som lagringen godtar ved neste innlasting', () => {
+    const todo = createTodo({ title: 'Skuddårsdugnad', description: 'Hvert år', dates: [{ month: 2, day: 29 }] }, [], now)
+    saveTodos([todo])
+    expect(loadTodos()).toEqual({ status: 'ok', todos: [todo] })
+    localStorage.clear()
+  })
+})
+
+describe('datovelgeren', () => {
+  it('gjør teksten om til verdien velgeren bruker, i året den får', () => {
+    expect(toPickerValue('5.3', 2026)).toBe('2026-03-05')
+    expect(toPickerValue('15/10', 2027)).toBe('2027-10-15')
+  })
+
+  it('gir tom verdi når teksten ikke er en dato', () => {
+    expect(toPickerValue('', 2026)).toBe('')
+    expect(toPickerValue('31.04', 2026)).toBe('')
+  })
+
+  it('gjør verdien fra velgeren om til dd.mm', () => {
+    expect(fromPickerValue('2026-10-05')).toBe('05.10')
+    expect(fromPickerValue('')).toBe('')
+  })
+})
