@@ -155,6 +155,10 @@ dialog::backdrop { background: rgba(20, 26, 24, 0.55); }
 /* Form */
 .field { margin: 0 0 18px; }
 .field label, fieldset legend { display: block; font-weight: 600; margin-bottom: 6px; }
+.label-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.label-row label { margin-bottom: 0; }
+.counter { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.counter.over { color: var(--error); font-weight: 600; }
 .optional { font-weight: 400; color: var(--muted); }
 input[type="text"], textarea {
   width: 100%;
