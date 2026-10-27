@@ -6,6 +6,7 @@
   --line: #e3dccd;
   --card: #f9f6ef;
   --red: #c4302b;
+  --error: #b3261e;
   --winter: #e3e9ef;
   --winter-text: #2b3a48;
   --spring: #bfdc9c;
@@ -108,3 +109,58 @@ body {
   pointer-events: none;
   z-index: 2;
 }
+
+/* Buttons */
+.btn {
+  font: 600 16px var(--sans);
+  border-radius: 999px;
+  padding: 10px 20px;
+  border: 2px solid transparent;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.btn.primary { background: var(--text); color: #ffffff; }
+.btn.secondary { border-color: var(--text); }
+.btn.icon { padding: 8px 10px; border-color: #cfc6b4; border-width: 1.5px; border-radius: 10px; line-height: 0; }
+.btn:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+
+/* Dialogs */
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 0;
+  width: min(560px, 92vw);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+dialog::backdrop { background: rgba(20, 26, 24, 0.55); }
+.dlg { position: relative; padding: 28px 32px; }
+.dlg h2 { font-family: var(--serif); font-weight: 400; font-size: 34px; margin: 0 48px 14px 0; }
+.close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; padding: 0; font-size: 26px; line-height: 1; }
+.dlg-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+
+/* Form */
+.field { margin: 0 0 18px; }
+.field label, fieldset legend { display: block; font-weight: 600; margin-bottom: 6px; }
+.optional { font-weight: 400; color: var(--muted); }
+input[type="text"], textarea {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1.5px solid #cfc6b4;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--text);
+}
+textarea { resize: vertical; }
+[aria-invalid="true"] { border-color: var(--error) !important; }
+.field-error { color: var(--error); margin: 6px 0 0; font-size: 14px; font-weight: 600; }
+.field-error:empty { display: none; }
+fieldset { border: 0; padding: 0; min-width: 0; }
+fieldset legend { padding: 0; }
+.hint { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+.date-line { position: relative; display: flex; gap: 8px; align-items: center; }
+.date-line input[type="text"] { width: 120px; }
+.picker { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

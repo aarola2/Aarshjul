@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App.tsx'
-import { STORAGE_KEY } from './storage.ts'
+import { loadTodos, STORAGE_KEY } from './storage.ts'
 
 describe('App', () => {
   it('viser overskriften Årshjul', () => {
@@ -88,5 +88,93 @@ describe('App, sidekolonnen for inneværende måned', () => {
     render(<App />)
     expect(screen.getByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
     expect(cardTitles()).toEqual(titles)
+  })
+})
+
+describe('App, nytt gjøremål', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const openForm = () => {
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    return screen.getByRole('dialog', { name: 'Nytt gjøremål' })
+  }
+  const fill = (title: string, date: string) => {
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: title } })
+    fireEvent.change(screen.getByLabelText('Dato 1'), { target: { value: date } })
+  }
+  const save = () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+  }
+  const column = () => screen.getByRole('complementary', { name: 'Denne måneden' })
+
+  it('har knappen «+ Legg til nytt gjøremål» i toppfeltet, og skjemaet er lukket fra start', () => {
+    render(<App />)
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: '+ Legg til nytt gjøremål' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('lagrer et gyldig gjøremål og viser det med en gang på hjulet og i sidekolonnen', () => {
+    render(<App />)
+    openForm()
+    fill('Dekkskift', '15.10')
+    save()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getAllByTestId('prikk')).toHaveLength(1)
+    expect(within(column()).getByRole('heading', { level: 3, name: 'Dekkskift' })).toBeInTheDocument()
+    const stored = loadTodos()
+    expect(stored).toMatchObject({
+      status: 'ok',
+      todos: [{ title: 'Dekkskift', description: '', dates: [{ month: 10, day: 15 }], createdAt: new Date(2026, 9, 27, 12, 0).toISOString() }],
+    })
+  })
+
+  it('legger det nye gjøremålet til de som er lagret fra før', () => {
+    const before = [
+      { id: 'a1', title: 'Vårvask', description: '', dates: [{ month: 5, day: 1 }], createdAt: '2026-01-02T09:00:00.000Z' },
+    ]
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(before))
+    render(<App />)
+    openForm()
+    fill('Dekkskift', '15.10')
+    save()
+    const stored = loadTodos()
+    expect(stored.status === 'ok' && stored.todos.map((todo) => todo.title)).toEqual(['Vårvask', 'Dekkskift'])
+    expect(screen.getAllByTestId('prikk')).toHaveLength(2)
+  })
+
+  it.each([
+    ['uten tittel', '', '15.10', 'Tittel er påkrevd.'],
+    ['uten dato', 'Dekkskift', '', 'Minst én dato er påkrevd.'],
+    ['med ugyldig dato', 'Dekkskift', '31.04', 'Skriv datoen som dd.mm, for eksempel 15.05.'],
+  ])('lagrer ingenting %s', (_name, title, date, message) => {
+    render(<App />)
+    openForm()
+    fill(title, date)
+    save()
+    expect(screen.getByText(message)).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).toBeInTheDocument()
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
+    expect(screen.queryAllByTestId('prikk')).toHaveLength(0)
+  })
+
+  it('«Avbryt» lukker uten å lagre, og skjemaet er tomt neste gang', () => {
+    render(<App />)
+    openForm()
+    fill('Dekkskift', '15.10')
+    fireEvent.click(screen.getByRole('button', { name: 'Avbryt' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
+    expect(screen.queryAllByTestId('prikk')).toHaveLength(0)
+    openForm()
+    expect(screen.getByLabelText('Tittel')).toHaveValue('')
+    expect(screen.getByLabelText('Dato 1')).toHaveValue('')
   })
 })
