@@ -1,9 +1,18 @@
 import { type SubmitEvent, useEffect, useId, useRef, useState } from 'react'
-import { MAX_DATES } from './storage.ts'
-import { type FormErrors, fromPickerValue, toPickerValue, type TodoDraft, validateForm } from './todoForm.ts'
+import { MAX_DATES, type TodoDate } from './storage.ts'
+import {
+  type FormErrors,
+  formatDate,
+  fromPickerValue,
+  toPickerValue,
+  type TodoDraft,
+  validateForm,
+} from './todoForm.ts'
 import { useModalDialog } from './useModalDialog.ts'
 
 interface TodoFormDialogProps {
+  // The todo being edited; left out for a new one
+  initial?: TodoDraft | undefined
   onSave: (draft: TodoDraft) => void
   onClose: () => void
 }
@@ -25,6 +34,14 @@ const NO_ERRORS: ShownErrors = { title: undefined, description: undefined, group
 
 const dateName = (index: number) => `date-${String(index + 1)}`
 
+const byCalendar = (a: TodoDate, b: TodoDate) => a.month - b.month || a.day - b.day
+
+// One row per stored date, in calendar order, or a single empty row for a new todo
+function initialRows(initial: TodoDraft | undefined): DateRow[] {
+  if (!initial) return [{ key: 0, text: '' }]
+  return [...initial.dates].sort(byCalendar).map((date, key) => ({ key, text: formatDate(date) }))
+}
+
 function firstInvalidField(errors: FormErrors): string | undefined {
   if (errors.title !== undefined) return 'title'
   if (errors.description !== undefined) return 'description'
@@ -33,17 +50,17 @@ function firstInvalidField(errors: FormErrors): string | undefined {
   return errors.group === undefined ? undefined : dateName(0)
 }
 
-// The form is mounted when it opens and unmounted when it closes, so it always starts empty
-export default function TodoFormDialog({ onSave, onClose }: TodoFormDialogProps) {
+// The form is mounted when it opens and unmounted when it closes, so it always starts from `initial`
+export default function TodoFormDialog({ initial, onSave, onClose }: TodoFormDialogProps) {
   const dialogRef = useModalDialog()
   const formRef = useRef<HTMLFormElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
-  const nextKey = useRef(1)
+  const [rows, setRows] = useState(() => initialRows(initial))
+  const nextKey = useRef(rows.length)
   // The date field to focus once the list has been drawn after adding or removing one
   const focusIndex = useRef<number | null>(null)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [rows, setRows] = useState<DateRow[]>([{ key: 0, text: '' }])
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [description, setDescription] = useState(initial?.description ?? '')
   const [errors, setErrors] = useState(NO_ERRORS)
   const id = useId()
 
@@ -95,7 +112,7 @@ export default function TodoFormDialog({ onSave, onClose }: TodoFormDialogProps)
         <button type="button" className="btn close" aria-label="Lukk" onClick={onClose}>
           ×
         </button>
-        <h2 id={`${id}-heading`}>Nytt gjøremål</h2>
+        <h2 id={`${id}-heading`}>{initial ? 'Rediger gjøremål' : 'Nytt gjøremål'}</h2>
         <div className="field">
           <label htmlFor={`${id}-title`}>Tittel</label>
           <input

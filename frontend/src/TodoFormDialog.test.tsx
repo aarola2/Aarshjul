@@ -317,3 +317,78 @@ describe('TodoFormDialog, flere datoer', () => {
     expect(nthDate(2)).toHaveFocus()
   })
 })
+
+describe('TodoFormDialog, rediger', () => {
+  const INITIAL = {
+    title: 'Rense takrennene',
+    description: 'Begge sider av huset.',
+    dates: [{ month: 10, day: 28 }, { month: 3, day: 20 }, { month: 6, day: 1 }],
+  }
+
+  const renderEdit = () => {
+    const onSave = vi.fn()
+    const onClose = vi.fn()
+    render(<TodoFormDialog initial={INITIAL} onSave={onSave} onClose={onClose} />)
+    return { onSave, onClose }
+  }
+  const editDialog = () => screen.getByRole('dialog', { name: 'Rediger gjøremål' })
+  const dateValues = () => screen.getAllByLabelText(/^Dato \d+$/).map((field) => (field as HTMLInputElement).value)
+
+  it('heter «Rediger gjøremål» og er fylt ut med verdiene, datoene i kalenderrekkefølge', () => {
+    renderEdit()
+    expect(editDialog()).toHaveAttribute('open')
+    expect(screen.queryByRole('dialog', { name: 'Nytt gjøremål' })).toBeNull()
+    expect(titleField()).toHaveValue('Rense takrennene')
+    expect(descriptionField()).toHaveValue('Begge sider av huset.')
+    expect(dateValues()).toEqual(['20.03', '01.06', '28.10'])
+    expect(screen.getAllByRole('button', { name: /^Fjern dato/ })).toHaveLength(3)
+  })
+
+  it('lagrer endringene', () => {
+    const { onSave } = renderEdit()
+    type(titleField(), 'Rense takrenner')
+    type(screen.getByLabelText('Dato 2'), '15.06')
+    save()
+    expect(onSave).toHaveBeenCalledExactlyOnceWith({
+      title: 'Rense takrenner',
+      description: 'Begge sider av huset.',
+      dates: [{ month: 3, day: 20 }, { month: 6, day: 15 }, { month: 10, day: 28 }],
+    })
+  })
+
+  it('lagrer uendrede verdier som de er', () => {
+    const { onSave } = renderEdit()
+    save()
+    expect(onSave).toHaveBeenCalledExactlyOnceWith({
+      ...INITIAL,
+      dates: [{ month: 3, day: 20 }, { month: 6, day: 1 }, { month: 10, day: 28 }],
+    })
+  })
+
+  it.each([
+    ['tom tittel', 'Tittel', '', 'Tittel er påkrevd.'],
+    ['samme dato to ganger', 'Dato 2', '28.10', '28. oktober er allerede lagt inn på dette gjøremålet.'],
+    ['ugyldig dato', 'Dato 1', '31.04', 'Skriv datoen som dd.mm, for eksempel 15.05.'],
+  ])('bruker samme regler som ved oppretting: %s', (_name, label, value, message) => {
+    const { onSave } = renderEdit()
+    type(screen.getByLabelText(label), value)
+    save()
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByText(message)).toBeInTheDocument()
+  })
+
+  it('«Avbryt» lukker uten å lagre', () => {
+    const { onSave, onClose } = renderEdit()
+    type(titleField(), 'Noe annet')
+    fireEvent.click(within(editDialog()).getByRole('button', { name: 'Avbryt' }))
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('kan legge til en ekstra dato etter de utfylte', () => {
+    renderEdit()
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til ekstra dato' }))
+    expect(dateValues()).toEqual(['20.03', '01.06', '28.10', ''])
+    expect(screen.getByLabelText('Dato 4')).toHaveFocus()
+  })
+})
