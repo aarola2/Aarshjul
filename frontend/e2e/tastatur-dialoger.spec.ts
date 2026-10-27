@@ -64,13 +64,31 @@ test('alle knapper og skjemafelt kan nås og brukes med tastatur', async ({ page
   const saved = JSON.parse((await stored(page)) ?? '[]') as { title: string; dates: unknown }[]
   expect(saved).toMatchObject([{ title: 'Dekkskift', description: 'Bytt til vinterdekk.', dates: [{ month: 10, day: 15 }] }])
 
-  // View
+  // View, closed with «Lukk»
   await tabTo(page, 'Dekkskift')
   await page.keyboard.press('Enter')
   const view = page.getByRole('dialog', { name: 'Dekkskift' })
   await expect(view.getByText('↻ Gjentas automatisk hvert år')).toBeVisible()
+  await tabTo(page, 'Lukk')
+  await page.keyboard.press('Enter')
+  await expect(view).toHaveCount(0)
 
-  // Delete
+  // Edit from the view, left with «Avbryt»
+  await tabTo(page, 'Dekkskift')
+  await page.keyboard.press('Enter')
+  await tabTo(page, 'Rediger')
+  await page.keyboard.press('Enter')
+  const edit = page.getByRole('dialog', { name: 'Rediger gjøremål' })
+  await expect(edit.getByLabel('Tittel')).toBeFocused()
+  await page.keyboard.type(' (endret)')
+  await tabTo(page, 'Avbryt')
+  await page.keyboard.press('Enter')
+  await expect(edit).toHaveCount(0)
+  expect(JSON.parse((await stored(page)) ?? '[]')).toMatchObject([{ title: 'Dekkskift' }])
+
+  // Delete from the view
+  await tabTo(page, 'Dekkskift')
+  await page.keyboard.press('Enter')
   await tabTo(page, 'Slett')
   await page.keyboard.press('Enter')
   const confirm = page.getByRole('dialog', { name: 'Er du sikker?' })
