@@ -128,11 +128,12 @@ function DateField({ value, error, errorId, onChange }: DateFieldProps) {
     const picker = pickerRef.current
     if (!picker) return
     picker.value = toPickerValue(value, new Date().getFullYear())
+    // Safari closes its picker only when the field it belongs to loses focus, so the field must have it
+    picker.focus()
     try {
       picker.showPicker()
     } catch {
-      // Some browsers refuse to show the picker; focus lets the user open it from the keyboard
-      picker.focus()
+      // Some browsers refuse to show the picker; the focus lets the user open it from the keyboard
     }
   }
 

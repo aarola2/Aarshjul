@@ -136,6 +136,19 @@ describe('TodoFormDialog', () => {
     expect(picker(container).value).toBe(`${String(new Date().getFullYear())}-10-15`)
   })
 
+  it('gir velgeren fokus før den åpnes, så Safari kan lukke den igjen', () => {
+    const { container } = renderForm()
+    let focusedWhenOpened: Element | null = null
+    vi.spyOn(HTMLInputElement.prototype, 'showPicker').mockImplementation(() => {
+      focusedWhenOpened = document.activeElement
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Velg dato 1 i kalender' }))
+    expect(focusedWhenOpened).toBe(picker(container))
+    // Choosing a date moves focus away from the picker, which is what closes it
+    fireEvent.change(picker(container), { target: { value: '2026-10-05' } })
+    expect(picker(container)).not.toHaveFocus()
+  })
+
   it('flytter fokus til velgeren når nettleseren ikke kan vise den', () => {
     const { container } = renderForm()
     vi.spyOn(HTMLInputElement.prototype, 'showPicker').mockImplementation(() => {
