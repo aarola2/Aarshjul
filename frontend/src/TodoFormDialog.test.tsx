@@ -390,5 +390,8 @@ describe('TodoFormDialog, rediger', () => {
     fireEvent.click(screen.getByRole('button', { name: '+ Legg til ekstra dato' }))
     expect(dateValues()).toEqual(['20.03', '01.06', '28.10', ''])
     expect(screen.getByLabelText('Dato 4')).toHaveFocus()
+    // The new field must not share a key with a filled-in one, or typing would change both
+    type(screen.getByLabelText('Dato 4'), '24.12')
+    expect(dateValues()).toEqual(['20.03', '01.06', '28.10', '24.12'])
   })
 })
