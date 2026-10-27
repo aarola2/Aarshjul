@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import MonthColumn from './MonthColumn.tsx'
 import { loadTodos, type Todo } from './storage.ts'
 import { useToday } from './useToday.ts'
 import Wheel from './Wheel.tsx'
@@ -24,7 +25,7 @@ export default function App() {
           <Wheel today={today} todos={todos} />
         </section>
         <aside className="month" aria-label="Denne måneden">
-          <p className="eyebrow">Denne måneden</p>
+          <MonthColumn today={today} todos={todos} />
         </aside>
       </main>
     </>

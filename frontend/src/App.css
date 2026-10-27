@@ -4,6 +4,7 @@
   --muted: #5d6763;
   --surface: #fffdf8;
   --line: #e3dccd;
+  --card: #f9f6ef;
   --red: #c4302b;
   --winter: #e3e9ef;
   --winter-text: #2b3a48;
@@ -53,6 +54,19 @@ body {
 .wheel { height: 100%; width: auto; max-width: 100%; aspect-ratio: 1 / 1; overflow: visible; }
 .month { background: var(--surface); border-left: 1px solid var(--line); padding: 40px 32px; overflow-y: auto; }
 .eyebrow { margin: 0; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600; font-size: 14px; color: var(--muted); }
+
+/* Cards for the current month */
+.month-title { font-family: var(--serif); font-weight: 400; font-size: 56px; margin: 4px 0 24px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; }
+.card h3 { margin: 12px 0 6px; font-size: 21px; overflow-wrap: anywhere; }
+.desc { margin: 0 0 14px; color: #3b4542; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge { border-radius: 999px; padding: 4px 12px; font-weight: 600; font-size: 14px; border: 2px solid transparent; }
+.badge.winter { background: var(--winter); color: var(--winter-text); }
+.badge.spring { background: var(--spring); color: var(--spring-text); }
+.badge.summer { background: var(--summer); color: var(--summer-text); }
+.badge.autumn { background: var(--autumn); color: var(--autumn-text); }
+.badge.today { border-color: var(--red); }
 
 /* Wheel */
 .rim { fill: var(--surface); stroke: var(--line); stroke-width: 2; }
