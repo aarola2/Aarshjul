@@ -18,11 +18,13 @@ export default function MonthColumn({ today, todos, onOpenTodo, onEditTodo, onDe
   const month = MONTHS[today.getMonth()]
   // getMonth() is always 0–11; the check is only there for the type
   if (!month) return null
+  const items = todosInMonth(todos, month.number)
   return (
     <>
       <p className="eyebrow">Denne måneden</p>
       <h2 className="month-title">{capitalise(month.name)}</h2>
-      {todosInMonth(todos, month.number).map((item) => (
+      {items.length === 0 && <EmptyMonth monthName={month.name} />}
+      {items.map((item) => (
         <MonthCard
           key={item.todo.id}
           item={item}
@@ -39,6 +41,17 @@ export default function MonthColumn({ today, todos, onOpenTodo, onEditTodo, onDe
         />
       ))}
     </>
+  )
+}
+
+function EmptyMonth({ monthName }: { monthName: string }) {
+  return (
+    <div className="empty">
+      <p>
+        <strong>Ingen oppgaver denne måneden</strong>
+        Gjøremål med en dato i {monthName} dukker opp her.
+      </p>
+    </div>
   )
 }
 
