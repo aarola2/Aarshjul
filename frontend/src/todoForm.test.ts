@@ -109,7 +109,7 @@ describe('validateForm, datoer som ikke finnes', () => {
     expect(validateForm(values('Dekkskift', date)).ok).toBe(true)
   })
 
-  it('lagrer 29. februar som 29. februar, uansett år', () => {
+  it('lagrer 29. februar som 29. februar', () => {
     expect(validateForm(values('Skuddårsdugnad', '29.02'))).toMatchObject({ ok: true, draft: { dates: [{ month: 2, day: 29 }] } })
   })
 })
