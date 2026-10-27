@@ -76,3 +76,25 @@ test('«Last ned kopien» laster ned kopien som fil, og «Lukk» skjuler melding
   await alert(page).getByRole('button', { name: 'Lukk' }).click()
   await expect(alert(page)).toHaveCount(0)
 })
+
+test('når kopien ikke kan lagres i nettleseren, sier meldingen det', async ({ page }) => {
+  // Full storage: the copy is refused, everything else works as usual
+  await page.addInitScript({
+    content: `const setItem = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key, value) {
+      if (key === ${JSON.stringify(COPY_KEY)}) throw new DOMException('Full', 'QuotaExceededError')
+      return setItem.call(this, key, value)
+    }`,
+  })
+  await openWith(page, CORRUPT)
+  await expect(alert(page)).toContainText('Kopien kunne ikke lagres i nettleseren. Last ned kopien før du lagrer noe nytt.')
+  await expect(alert(page)).not.toContainText('tatt vare på')
+  expect(await read(page, COPY_KEY)).toBeNull()
+
+  // The copy can still be downloaded
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    alert(page).getByRole('button', { name: 'Last ned kopien' }).click(),
+  ])
+  expect(await readFile(await download.path(), 'utf8')).toBe(CORRUPT)
+})

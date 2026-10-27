@@ -1,6 +1,8 @@
 interface CorruptDataAlertProps {
   // The stored text that could not be used; it is only ever downloaded, never shown
   raw: string
+  // false when the copy could not be kept in the browser, so it can only be downloaded
+  isCopyKept: boolean
   onClose: () => void
 }
 
@@ -20,12 +22,14 @@ function download(text: string, fileName: string) {
   }, 1000)
 }
 
-export default function CorruptDataAlert({ raw, onClose }: CorruptDataAlertProps) {
+export default function CorruptDataAlert({ raw, isCopyKept, onClose }: CorruptDataAlertProps) {
   return (
     <div className="alert" role="alert">
       <p>
-        <strong>Lagrede data var ødelagt.</strong> De kunne ikke leses, så årshjulet startet med en tom liste. En
-        kopi av de ødelagte dataene er tatt vare på.
+        <strong>Lagrede data var ødelagt.</strong> De kunne ikke leses, så årshjulet startet med en tom liste.{' '}
+        {isCopyKept
+          ? 'En kopi av de ødelagte dataene er tatt vare på.'
+          : 'Kopien kunne ikke lagres i nettleseren. Last ned kopien før du lagrer noe nytt.'}
       </p>
       <div className="alert-actions">
         <button

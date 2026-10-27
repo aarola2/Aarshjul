@@ -43,6 +43,7 @@ Tatt uendret fra referansen:
 | Bekreftelsen viser tittelen og «… slettes. Dette kan ikke angres.» | Referansen sier bare «Er du sikker?» med gjøremålets tittel. |
 | Datofelt med tom verdi ignoreres ved lagring | Ikke beskrevet i referansen. Bare når alle datofelt er tomme, vises «Minst én dato er påkrevd.». |
 | Feilmeldinger for lengde og format: «Tittelen kan ha maks 60 tegn.», «Beskrivelsen kan ha maks 500 tegn.», «Skriv datoen som dd.mm, for eksempel 15.05.» | Referansen gir ikke tekst for disse. |
+| Kan kopien av ødelagte data ikke lagres (full lagring), avsluttes varselet med «Kopien kunne ikke lagres i nettleseren. Last ned kopien før du lagrer noe nytt.» i stedet for «En kopi av de ødelagte dataene er tatt vare på.» | Ellers lover meldingen noe som ikke stemmer, og dataene kan gå tapt i det stille. Besluttet av eier i #19. |
 | I «Vis gjøremål» står «29. februar vises som 28. februar i år uten skuddår.» når det gjelder | Gjør regelen fra brukerhistorien synlig for brukeren. |
 | Kalendervelgeren er nettleserens egen datovelger | Den kan ikke velge 29. februar i år uten skuddår; da skrives datoen inn. |
 | Prototypemenyen nederst til venstre | Bare for å vise tilstander i prototypen. Bygges ikke. Den er lukket fra start og dekker deler av hjulet når den er åpen. |

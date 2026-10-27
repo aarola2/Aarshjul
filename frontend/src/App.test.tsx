@@ -506,13 +506,31 @@ describe('App, ødelagte data', () => {
     expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBe(RAW)
   })
 
-  it('viser varselet selv om kopien ikke kunne lagres', () => {
+  it('sier at kopien er tatt vare på når den ble lagret', () => {
+    localStorage.setItem(STORAGE_KEY, RAW)
+    render(<App />)
+    expect(screen.getByRole('alert')).toHaveTextContent('En kopi av de ødelagte dataene er tatt vare på.')
+  })
+
+  it('sier fra og ber om nedlasting når kopien ikke kunne lagres', () => {
     localStorage.setItem(STORAGE_KEY, RAW)
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('Full', 'QuotaExceededError')
     })
     render(<App />)
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Kopien kunne ikke lagres i nettleseren. Last ned kopien før du lagrer noe nytt.')
+    expect(screen.getByRole('alert')).not.toHaveTextContent('tatt vare på')
     expect(screen.getByRole('button', { name: 'Last ned kopien' })).toBeInTheDocument()
+  })
+
+  it('viser varselet under toppfeltet, før hjulet og sidekolonnen', () => {
+    localStorage.setItem(STORAGE_KEY, RAW)
+    render(<App />)
+    const header = screen.getByRole('banner')
+    const alert = screen.getByRole('alert')
+    const main = screen.getByRole('main')
+    expect(header.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(alert.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(header.contains(alert) || main.contains(alert)).toBe(false)
   })
 })

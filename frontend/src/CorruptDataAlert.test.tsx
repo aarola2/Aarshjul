@@ -26,7 +26,7 @@ describe('CorruptDataAlert', () => {
 
   const renderAlert = () => {
     const onClose = vi.fn()
-    render(<CorruptDataAlert raw={RAW} onClose={onClose} />)
+    render(<CorruptDataAlert raw={RAW} isCopyKept onClose={onClose} />)
     return { onClose, alert: screen.getByRole('alert') }
   }
 
@@ -70,5 +70,15 @@ describe('CorruptDataAlert', () => {
     const { alert, onClose } = renderAlert()
     fireEvent.click(within(alert).getByRole('button', { name: 'Lukk' }))
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('sier fra og ber om nedlasting når kopien ikke kunne lagres', () => {
+    render(<CorruptDataAlert raw={RAW} isCopyKept={false} onClose={vi.fn()} />)
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent(
+      'Lagrede data var ødelagt. De kunne ikke leses, så årshjulet startet med en tom liste. Kopien kunne ikke lagres i nettleseren. Last ned kopien før du lagrer noe nytt.',
+    )
+    expect(alert).not.toHaveTextContent('tatt vare på')
+    expect(within(alert).getByRole('button', { name: 'Last ned kopien' })).toBeInTheDocument()
   })
 })

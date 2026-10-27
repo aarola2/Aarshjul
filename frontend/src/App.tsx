@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import './App.css'
 import ConfirmDeleteDialog from './ConfirmDeleteDialog.tsx'
 import CorruptDataAlert from './CorruptDataAlert.tsx'
@@ -18,10 +18,8 @@ export default function App() {
   const [loaded] = useState(loadTodos)
   const [todos, setTodos] = useState<Todo[]>(loaded.status === 'ok' ? loaded.todos : [])
   const [corruptRaw, setCorruptRaw] = useState(loaded.status === 'corrupt' ? loaded.raw : null)
-  // Kept before anything can be saved over the corrupt data
-  useEffect(() => {
-    if (loaded.status === 'corrupt') keepCorruptCopy(loaded.raw)
-  }, [loaded])
+  // Kept before anything can be saved over the corrupt data. Writing the same text twice in StrictMode does no harm.
+  const [isCopyKept] = useState(() => loaded.status !== 'corrupt' || keepCorruptCopy(loaded.raw))
   const [form, setForm] = useState<FormState>(null)
   const [viewingId, setViewingId] = useState<string | null>(null)
   const viewing = todos.find((todo) => todo.id === viewingId)
@@ -77,6 +75,7 @@ export default function App() {
       {corruptRaw !== null && (
         <CorruptDataAlert
           raw={corruptRaw}
+          isCopyKept={isCopyKept}
           onClose={() => {
             setCorruptRaw(null)
           }}
