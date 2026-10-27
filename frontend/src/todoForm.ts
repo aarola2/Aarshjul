@@ -124,3 +124,8 @@ export const formatDate = (date: TodoDate) => `${pad(date.day)}.${pad(date.month
 export function updateTodo(todos: readonly Todo[], id: string, draft: TodoDraft): Todo[] {
   return todos.map((todo) => (todo.id === id ? { ...todo, ...draft } : todo))
 }
+
+// The others keep their order
+export function removeTodo(todos: readonly Todo[], id: string): Todo[] {
+  return todos.filter((todo) => todo.id !== id)
+}
