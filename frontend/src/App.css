@@ -7,6 +7,7 @@
   --line-strong: #9b917c;
   --card: #f9f6ef;
   --red: #c4302b;
+  --danger: #a52520;
   --error: #b3261e;
   --winter: #e3e9ef;
   --winter-text: #2b3a48;
@@ -125,6 +126,9 @@ body {
 }
 .btn.primary { background: var(--text); color: #ffffff; }
 .btn.secondary { border-color: var(--text); }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn.danger-text { color: var(--danger); }
+.btn.danger-fill { background: var(--red); color: #ffffff; }
 .btn.dashed { border: 2px dashed #9aa19d; }
 .btn.link { padding: 6px 10px; text-decoration: underline; }
 .btn.icon { padding: 8px 10px; border-color: #cfc6b4; border-width: 1.5px; border-radius: 10px; line-height: 0; }

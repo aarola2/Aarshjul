@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import './App.css'
+import ConfirmDeleteDialog from './ConfirmDeleteDialog.tsx'
 import MonthColumn from './MonthColumn.tsx'
 import { loadTodos, saveTodos, type Todo } from './storage.ts'
-import { createTodo, type TodoDraft, updateTodo } from './todoForm.ts'
+import { createTodo, removeTodo, type TodoDraft, updateTodo } from './todoForm.ts'
 import TodoFormDialog from './TodoFormDialog.tsx'
 import TodoViewDialog from './TodoViewDialog.tsx'
 import { useToday } from './useToday.ts'
@@ -23,13 +24,28 @@ export default function App() {
   const editing = form?.kind === 'edit' ? todos.find((todo) => todo.id === form.id) : undefined
   // The form for editing is only shown while the todo still exists, so it never turns into a new one
   const isFormShown = form?.kind === 'new' || editing !== undefined
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const deleting = todos.find((todo) => todo.id === deletingId)
 
-  // Saved first, so the wheel and the column never show a todo that is not stored
-  const saveTodo = (draft: TodoDraft) => {
-    const next = editing ? updateTodo(todos, editing.id, draft) : [...todos, createTodo(draft, todos, new Date())]
+  // Saved first, so the wheel and the column never show anything that is not stored
+  const store = (next: Todo[]) => {
     saveTodos(next)
     setTodos(next)
+  }
+
+  const saveTodo = (draft: TodoDraft) => {
+    store(editing ? updateTodo(todos, editing.id, draft) : [...todos, createTodo(draft, todos, new Date())])
     setForm(null)
+  }
+
+  const askToDelete = (id: string) => {
+    setViewingId(null)
+    setDeletingId(id)
+  }
+
+  const deleteTodo = (id: string) => {
+    store(removeTodo(todos, id))
+    setDeletingId(null)
   }
 
   const editTodo = (id: string) => {
@@ -59,7 +75,13 @@ export default function App() {
           <Wheel today={today} todos={todos} onOpenTodo={setViewingId} />
         </section>
         <aside className="month" aria-label="Denne måneden">
-          <MonthColumn today={today} todos={todos} onOpenTodo={setViewingId} onEditTodo={editTodo} />
+          <MonthColumn
+            today={today}
+            todos={todos}
+            onOpenTodo={setViewingId}
+            onEditTodo={editTodo}
+            onDeleteTodo={askToDelete}
+          />
         </aside>
       </main>
       {viewing && (
@@ -70,6 +92,18 @@ export default function App() {
             setViewingId(null)
           }}
           onEdit={editTodo}
+          onDelete={askToDelete}
+        />
+      )}
+      {deleting && (
+        <ConfirmDeleteDialog
+          title={deleting.title}
+          onConfirm={() => {
+            deleteTodo(deleting.id)
+          }}
+          onClose={() => {
+            setDeletingId(null)
+          }}
         />
       )}
       {isFormShown && (

@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { loadTodos, saveTodos, type Todo } from './storage.ts'
-import { createTodo, formatDate, fromPickerValue, parseDate, toPickerValue, updateTodo, validateForm } from './todoForm.ts'
+import {
+  createTodo,
+  formatDate,
+  fromPickerValue,
+  parseDate,
+  removeTodo,
+  toPickerValue,
+  updateTodo,
+  validateForm,
+} from './todoForm.ts'
 
 const FORMAT_ERROR = 'Skriv datoen som dd.mm, for eksempel 15.05.'
 
@@ -241,5 +250,37 @@ describe('updateTodo', () => {
     saveTodos(updateTodo(todos, 'b2', draft))
     expect(loadTodos()).toMatchObject({ status: 'ok', todos: [{ id: 'a1' }, { id: 'b2', title: 'Dekkskift, vinter' }, { id: 'c3' }] })
     localStorage.clear()
+  })
+})
+
+describe('removeTodo', () => {
+  const todos: Todo[] = [existing('a1'), existing('b2'), existing('c3')]
+
+  it('fjerner bare gjøremålet med id-en, og de andre beholder rekkefølgen', () => {
+    expect(removeTodo(todos, 'b2')).toEqual([todos[0], todos[2]])
+  })
+
+  it('endrer ikke listen den får', () => {
+    removeTodo(todos, 'b2')
+    expect(todos.map((todo) => todo.id)).toEqual(['a1', 'b2', 'c3'])
+  })
+
+  it('gir samme innhold når id-en ikke finnes', () => {
+    expect(removeTodo(todos, 'finnes-ikke')).toEqual(todos)
+  })
+
+  it('gir tom liste når det siste gjøremålet slettes, og lagringen godtar den', () => {
+    const next = removeTodo([existing('a1')], 'a1')
+    expect(next).toEqual([])
+    saveTodos(next)
+    expect(loadTodos()).toEqual({ status: 'ok', todos: [] })
+    localStorage.clear()
+  })
+
+  it('lar et nytt gjøremål få en id som ikke kolliderer med de som er igjen', () => {
+    const left = removeTodo(todos, 'b2')
+    const ids = ['a1', 'c3', 'b2']
+    const created = createTodo({ title: 'Ny', description: '', dates: [{ month: 1, day: 1 }] }, left, new Date(), () => ids.shift() ?? '')
+    expect(created.id).toBe('b2')
   })
 })

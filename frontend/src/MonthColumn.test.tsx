@@ -137,3 +137,37 @@ describe('MonthColumn, rediger', () => {
     }).not.toThrow()
   })
 })
+
+describe('MonthColumn, slett', () => {
+  it('har «Slett» på hvert kort, med tittelen i navnet', () => {
+    renderColumn()
+    expect(within(cardTitled('Dekkskift')).getByRole('button', { name: 'Slett «Dekkskift»' })).toHaveTextContent('Slett')
+    expect(screen.getAllByRole('button', { name: /^Slett/ })).toHaveLength(3)
+  })
+
+  it('«Slett» ber om å slette, uten å åpne visningen eller redigere', () => {
+    const onOpenTodo = vi.fn()
+    const onEditTodo = vi.fn()
+    const onDeleteTodo = vi.fn()
+    render(
+      <MonthColumn
+        today={TODAY}
+        todos={TODOS}
+        onOpenTodo={onOpenTodo}
+        onEditTodo={onEditTodo}
+        onDeleteTodo={onDeleteTodo}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Slett «Bestille feiing»' }))
+    expect(onDeleteTodo).toHaveBeenCalledExactlyOnceWith('d4')
+    expect(onOpenTodo).not.toHaveBeenCalled()
+    expect(onEditTodo).not.toHaveBeenCalled()
+  })
+
+  it('kan klikkes uten at noen lytter', () => {
+    renderColumn()
+    expect(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Slett «Dekkskift»' }))
+    }).not.toThrow()
+  })
+})

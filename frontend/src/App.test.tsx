@@ -362,3 +362,95 @@ describe('App, rediger', () => {
     expect(stored()).toHaveLength(2)
   })
 })
+
+describe('App, slett', () => {
+  const TODOS = [
+    {
+      id: 'c3',
+      title: 'Rense takrennene',
+      description: '',
+      dates: [{ month: 10, day: 3 }, { month: 3, day: 20 }],
+      createdAt: '2026-01-02T09:00:00.000Z',
+    },
+    { id: 'a1', title: 'Dekkskift', description: '', dates: [{ month: 10, day: 15 }], createdAt: '2026-02-03T10:00:00.000Z' },
+  ]
+
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(TODOS))
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const column = () => screen.getByRole('complementary', { name: 'Denne måneden' })
+  const confirm = () => screen.getByRole('dialog', { name: 'Er du sikker?' })
+  const stored = () => {
+    const result = loadTodos()
+    if (result.status !== 'ok') throw new Error('Lagringen kunne ikke leses')
+    return result.todos
+  }
+
+  it('«Slett» på kortet viser «Er du sikker?» med tittelen, uten visningen', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Rense takrennene»' }))
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(confirm()).toHaveAccessibleDescription('«Rense takrennene» slettes. Dette kan ikke angres.')
+  })
+
+  it('«Slett» i dialogen lukker visningen og viser bekreftelsen', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getAllByRole('article')[0] ?? column())
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Rense takrennene' })).getByRole('button', { name: 'Slett' }))
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(confirm()).toHaveAccessibleDescription('«Rense takrennene» slettes. Dette kan ikke angres.')
+  })
+
+  it('«Ja, slett» fjerner gjøremålet fra lagringen, hjulet og sidekolonnen', () => {
+    render(<App />)
+    expect(screen.getAllByTestId('prikk')).toHaveLength(3)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Rense takrennene»' }))
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Ja, slett' }))
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(stored()).toEqual([TODOS[1]])
+    expect(screen.getAllByTestId('prikk')).toHaveLength(1)
+    expect(within(column()).queryByRole('heading', { level: 3, name: 'Rense takrennene' })).toBeNull()
+    expect(within(column()).getByRole('heading', { level: 3, name: 'Dekkskift' })).toBeInTheDocument()
+  })
+
+  it('sletter gjøremålet som ble valgt, også når det ikke står først i lagringen', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    expect(confirm()).toHaveAccessibleDescription('«Dekkskift» slettes. Dette kan ikke angres.')
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Ja, slett' }))
+    expect(stored()).toEqual([TODOS[0]])
+    expect(screen.getAllByTestId('prikk')).toHaveLength(2)
+    expect(within(column()).getByRole('heading', { level: 3, name: 'Rense takrennene' })).toBeInTheDocument()
+  })
+
+  it('lar ingen visning eller skjema for det slettede gjøremålet bli stående', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getAllByRole('article')[0] ?? column())
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Rense takrennene' })).getByRole('button', { name: 'Slett' }))
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Ja, slett' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    // A new todo afterwards gets an empty form, not the deleted one
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).getByLabelText('Tittel')).toHaveValue('')
+  })
+
+  it('«Avbryt» lar gjøremålet være uendret', () => {
+    render(<App />)
+    const before = localStorage.getItem(STORAGE_KEY)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Avbryt' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(before)
+    expect(screen.getAllByTestId('prikk')).toHaveLength(3)
+    expect(within(column()).getAllByRole('article')).toHaveLength(2)
+  })
+})
