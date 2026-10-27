@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App.tsx'
-import { loadTodos, STORAGE_KEY } from './storage.ts'
+import { CORRUPT_COPY_KEY, loadTodos, STORAGE_KEY } from './storage.ts'
 
 describe('App', () => {
   it('viser overskriften Årshjul', () => {
@@ -452,5 +452,85 @@ describe('App, slett', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe(before)
     expect(screen.getAllByTestId('prikk')).toHaveLength(3)
     expect(within(column()).getAllByRole('article')).toHaveLength(2)
+  })
+})
+
+describe('App, ødelagte data', () => {
+  const RAW = '[{"id":'
+
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it.each([
+    ['kan ikke leses', RAW],
+    ['har ugyldig innhold', JSON.stringify([{ id: 'a1', tittel: 'Dekkskift' }])],
+  ])('starter med tom liste og varsel når dataene %s', (_name, raw) => {
+    localStorage.setItem(STORAGE_KEY, raw)
+    render(<App />)
+    expect(screen.queryAllByTestId('prikk')).toHaveLength(0)
+    expect(within(screen.getByRole('complementary', { name: 'Denne måneden' })).queryAllByRole('article')).toHaveLength(0)
+    expect(screen.getByRole('alert')).toHaveTextContent('Lagrede data var ødelagt.')
+    expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBe(raw)
+  })
+
+  it('viser ikke varselet når dataene er i orden eller mangler', () => {
+    render(<App />)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBeNull()
+  })
+
+  it('beholder kopien når brukeren lagrer et nytt gjøremål', () => {
+    localStorage.setItem(STORAGE_KEY, RAW)
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: 'Dekkskift' } })
+    fireEvent.change(screen.getByLabelText('Dato 1'), { target: { value: '15.10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    expect(loadTodos()).toMatchObject({ status: 'ok', todos: [{ title: 'Dekkskift' }] })
+    expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBe(RAW)
+  })
+
+  it('«Lukk» skjuler varselet', () => {
+    localStorage.setItem(STORAGE_KEY, RAW)
+    render(<App />)
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Lukk' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBe(RAW)
+  })
+
+  it('sier at kopien er tatt vare på når den ble lagret', () => {
+    localStorage.setItem(STORAGE_KEY, RAW)
+    render(<App />)
+    expect(screen.getByRole('alert')).toHaveTextContent('En kopi av de ødelagte dataene er tatt vare på.')
+  })
+
+  it('sier fra og ber om nedlasting når kopien ikke kunne lagres', () => {
+    localStorage.setItem(STORAGE_KEY, RAW)
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Full', 'QuotaExceededError')
+    })
+    render(<App />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Kopien kunne ikke lagres i nettleseren. Last ned kopien før du lagrer noe nytt.')
+    expect(screen.getByRole('alert')).not.toHaveTextContent('tatt vare på')
+    expect(screen.getByRole('button', { name: 'Last ned kopien' })).toBeInTheDocument()
+  })
+
+  it('viser varselet under toppfeltet, før hjulet og sidekolonnen', () => {
+    localStorage.setItem(STORAGE_KEY, RAW)
+    render(<App />)
+    const header = screen.getByRole('banner')
+    const alert = screen.getByRole('alert')
+    const main = screen.getByRole('main')
+    expect(header.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(alert.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(header.contains(alert) || main.contains(alert)).toBe(false)
   })
 })

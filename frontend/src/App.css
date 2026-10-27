@@ -9,6 +9,7 @@
   --red: #c4302b;
   --danger: #a52520;
   --error: #b3261e;
+  --alert-bg: #fbe9e6;
   --winter: #e3e9ef;
   --winter-text: #2b3a48;
   --spring: #bfdc9c;
@@ -50,6 +51,20 @@ body {
 .brand { display: flex; align-items: baseline; gap: 20px; }
 .brand h1 { font-family: var(--serif); font-weight: 400; font-size: 44px; margin: 0; }
 .brand p { margin: 0; color: var(--muted); font-size: 18px; }
+
+/* Warning about corrupt data */
+.alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 40px;
+  background: var(--alert-bg);
+  border-bottom: 1px solid #efc4bd;
+  color: #5a1612;
+}
+.alert p { margin: 0; line-height: 1.45; }
+.alert-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
 /* Two columns */
 .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 440px; }

@@ -11,9 +11,11 @@ export interface Todo {
   createdAt: string
 }
 
-export type LoadResult = { status: 'ok'; todos: Todo[] } | { status: 'corrupt' }
+// raw is the stored text exactly as it was, so a copy of it can be kept
+export type LoadResult = { status: 'ok'; todos: Todo[] } | { status: 'corrupt'; raw: string }
 
 export const STORAGE_KEY = 'aarhjul:v1:todos'
+export const CORRUPT_COPY_KEY = 'aarhjul:v1:corrupt-copy'
 export const MAX_TITLE_LENGTH = 60
 export const MAX_DESCRIPTION_LENGTH = 500
 export const MAX_DATES = 12
@@ -31,7 +33,18 @@ export function loadTodos(): LoadResult {
   const raw = localStorage.getItem(STORAGE_KEY)
   if (raw === null) return { status: 'ok', todos: [] }
   const parsed = parseJson(raw)
-  return isTodoList(parsed) ? { status: 'ok', todos: parsed } : { status: 'corrupt' }
+  return isTodoList(parsed) ? { status: 'ok', todos: parsed } : { status: 'corrupt', raw }
+}
+
+// Kept under its own key, which saveTodos never writes to. Returns false when storage refuses it,
+// for example when it is full, so the app can go on without it.
+export function keepCorruptCopy(raw: string): boolean {
+  try {
+    localStorage.setItem(CORRUPT_COPY_KEY, raw)
+    return true
+  } catch {
+    return false
+  }
 }
 
 function parseJson(raw: string): unknown {
