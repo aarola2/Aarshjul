@@ -492,6 +492,22 @@ describe('TodoFormDialog, tegnteller', () => {
     expect(screen.getByText('61/60')).toHaveClass('over')
   })
 
+  it('markerer ikke beskrivelsen før den passerer sin egen grense', () => {
+    renderForm()
+    type(descriptionField(), 'b'.repeat(500))
+    expect(screen.getByText('500/500')).not.toHaveClass('over')
+  })
+
+  it('teller og lagrer beskrivelsen uten mellomrom i endene, slik telleren viser', () => {
+    const { onSave } = renderForm()
+    type(titleField(), 'Dekkskift')
+    type(descriptionField(), ` ${'b'.repeat(500)} `)
+    type(dateField(), '15.10')
+    expect(screen.getByText('500/500')).not.toHaveClass('over')
+    save()
+    expect(onSave).toHaveBeenCalledExactlyOnceWith({ title: 'Dekkskift', description: 'b'.repeat(500), dates: [{ month: 10, day: 15 }] })
+  })
+
   it('viser lengden på verdiene som redigeres', () => {
     render(
       <TodoFormDialog
