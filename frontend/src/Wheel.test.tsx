@@ -283,6 +283,29 @@ describe('Wheel, tastatur og skjermleser', () => {
     ])
   })
 
+  it('tar prikker på samme dag innerst først, også 29. februar på den 28. i år uten skuddår', () => {
+    const sameDay = [
+      todo('p1', 'Første', [2, 28]),
+      todo('p2', 'Andre', [2, 29]),
+      todo('p3', 'Tredje', [2, 28]),
+      todo('p4', 'Fjerde', [2, 29]),
+      todo('p5', 'Femte', [3, 1]),
+    ]
+    renderWheel(vi.fn(), new Date(2026, 5, 1), sameDay)
+    const distance = (dot: HTMLElement) => {
+      const mark = dot.querySelector('circle')
+      return Math.hypot(Number(mark?.getAttribute('cx')) - 500, Number(mark?.getAttribute('cy')) - 500)
+    }
+    const all = dots()
+    // The four on 28 February come first, from the centre outwards, and 1 March last
+    expect(all.at(-1)).toHaveAccessibleName('Femte, 1. mars')
+    const february = all.slice(0, 4)
+    expect(february.map((dot) => dot.getAttribute('aria-label')?.endsWith('28. februar'))).toEqual([true, true, true, true])
+    const distances = february.map(distance)
+    expect(distances).toEqual([...distances].sort((a, b) => a - b))
+    expect(new Set(distances).size).toBe(4)
+  })
+
   it.each([
     ['Enter', 'Enter'],
     ['mellomrom', ' '],

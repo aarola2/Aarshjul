@@ -63,7 +63,7 @@ export default function Wheel({ today, todos = NO_TODOS, onOpenTodo }: WheelProp
   const showTooltip = (element: SVGGElement, title: string) => {
     const area = element.ownerSVGElement?.parentElement?.getBoundingClientRect()
     // Measure the dot itself, not the whole group, so the larger focus ring does not move the tooltip
-    const dot = (element.querySelector('circle') ?? element).getBoundingClientRect()
+    const dot = (element.querySelector('.dot-mark') ?? element).getBoundingClientRect()
     setTooltip({
       title,
       left: dot.left + dot.width / 2 - (area?.left ?? 0),

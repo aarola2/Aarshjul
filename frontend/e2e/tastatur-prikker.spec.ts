@@ -26,7 +26,7 @@ const CALENDAR_ORDER = [
   'Dekkskift, 15. oktober',
 ]
 
-const dot = (page: Page, name: string) => page.getByRole('button', { name })
+const dot = (page: Page, name: string) => page.getByRole('button', { name, exact: true })
 // Run in the browser; the e2e tests are type-checked without the DOM types
 const focusedLabel = async (page: Page) =>
   String(await page.evaluate('document.activeElement?.getAttribute("aria-label") ?? ""'))

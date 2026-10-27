@@ -14,7 +14,7 @@ const form = (page: Page) => page.getByRole('dialog', { name: 'Nytt gjøremål' 
 const dateField = (page: Page) => form(page).getByLabel('Dato 1', { exact: true })
 const column = (page: Page) => page.getByRole('complementary', { name: 'Denne måneden' })
 const wheel = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' })
-// Role and accessible name for the dots come with keyboard support in #21
+// All the dots; a single dot is found by its role and name
 const dots = (page: Page) => page.getByTestId('prikk')
 const stored = (page: Page) => page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)
 
