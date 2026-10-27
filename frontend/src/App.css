@@ -77,6 +77,7 @@ body {
 .month-title { font-family: var(--serif); font-weight: 400; font-size: 56px; margin: 4px 0 24px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; cursor: pointer; transition: border-color 0.12s; }
 .card:hover { border-color: var(--line-strong); }
+.card-title { all: unset; cursor: pointer; }
 .card h3 { margin: 12px 0 6px; font-size: 21px; overflow-wrap: anywhere; }
 .desc { margin: 0 0 14px; color: #3b4542; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
 .empty { border: 2px dashed var(--line); border-radius: 16px; padding: 28px; text-align: center; color: var(--muted); }
@@ -152,7 +153,7 @@ body {
 .btn.dashed { border: 2px dashed #9aa19d; }
 .btn.link { padding: 6px 10px; text-decoration: underline; }
 .btn.icon { padding: 8px 10px; border-color: #cfc6b4; border-width: 1.5px; border-radius: 10px; line-height: 0; }
-.btn:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+.btn:focus-visible, .card-title:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
 
 /* Dialogs */
 dialog {

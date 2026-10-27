@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
-import { useModalDialog } from './useModalDialog.ts'
+import { closeOnEscape, useModalDialog } from './useModalDialog.ts'
 
 interface ConfirmDeleteDialogProps {
   title: string
@@ -18,7 +18,10 @@ export default function ConfirmDeleteDialog({ title, onConfirm, onClose }: Confi
   }, [])
 
   return (
-    <dialog ref={dialogRef} aria-labelledby={`${id}-title`} aria-describedby={`${id}-text`} onClose={onClose}>
+    <dialog ref={dialogRef} aria-labelledby={`${id}-title`} aria-describedby={`${id}-text`}
+      onClose={onClose}
+      onCancel={closeOnEscape(onClose)}
+    >
       <div className="dlg">
         <button type="button" className="btn close" aria-label="Lukk" onClick={onClose}>
           ×

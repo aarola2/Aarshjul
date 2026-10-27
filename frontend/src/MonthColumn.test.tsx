@@ -210,3 +210,18 @@ describe('MonthColumn, tomtilstand', () => {
     expect(screen.queryByText(/dukker opp her/)).toBeNull()
   })
 })
+
+describe('MonthColumn, tastatur', () => {
+  it('gjør tittelen på kortet til en knapp i overskriften', () => {
+    renderColumn()
+    const heading = screen.getByRole('heading', { level: 3, name: 'Dekkskift' })
+    expect(within(heading).getByRole('button', { name: 'Dekkskift' })).toBeInTheDocument()
+  })
+
+  it('åpner gjøremålet én gang når tittelknappen brukes', () => {
+    const onOpenTodo = vi.fn()
+    render(<MonthColumn today={TODAY} todos={TODOS} onOpenTodo={onOpenTodo} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Rense takrennene' }))
+    expect(onOpenTodo).toHaveBeenCalledExactlyOnceWith('c3')
+  })
+})

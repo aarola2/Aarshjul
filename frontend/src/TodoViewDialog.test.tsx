@@ -111,6 +111,14 @@ describe('TodoViewDialog', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
+  it('lukker med en gang ved Esc, i stedet for å vente på nettleseren', () => {
+    const { onClose } = renderView()
+    const cancel = new Event('cancel', { cancelable: true })
+    fireEvent(dialog(), cancel)
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(cancel.defaultPrevented).toBe(true)
+  })
+
   it('melder fra når nettleseren lukker dialogen, for eksempel med Esc', () => {
     const { onClose } = renderView()
     fireEvent(dialog(), new Event('close'))

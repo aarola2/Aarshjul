@@ -8,7 +8,7 @@ import {
   type TodoDraft,
   validateForm,
 } from './todoForm.ts'
-import { useModalDialog } from './useModalDialog.ts'
+import { closeOnEscape, useModalDialog } from './useModalDialog.ts'
 
 interface TodoFormDialogProps {
   // The todo being edited; left out for a new one
@@ -103,7 +103,7 @@ export default function TodoFormDialog({ initial, onSave, onClose }: TodoFormDia
   const errorId = (field: string) => `${id}-${field}-error`
 
   return (
-    <dialog ref={dialogRef} aria-labelledby={`${id}-heading`} onClose={onClose}>
+    <dialog ref={dialogRef} aria-labelledby={`${id}-heading`} onClose={onClose} onCancel={closeOnEscape(onClose)}>
       <form ref={formRef} className="dlg" noValidate onSubmit={submit}>
         <button type="button" className="btn close" aria-label="Lukk" onClick={onClose}>
           ×

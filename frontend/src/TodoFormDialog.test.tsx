@@ -119,6 +119,15 @@ describe('TodoFormDialog', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
+  it('lukker med en gang ved Esc, i stedet for å vente på nettleseren', () => {
+    const { onSave, onClose } = renderForm()
+    const cancel = new Event('cancel', { cancelable: true })
+    fireEvent(dialog(), cancel)
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(cancel.defaultPrevented).toBe(true)
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
   it('melder fra når nettleseren lukker dialogen, for eksempel med Esc', () => {
     const { onSave, onClose } = renderForm()
     fireEvent(dialog(), new Event('close'))

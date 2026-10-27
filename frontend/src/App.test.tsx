@@ -575,3 +575,75 @@ describe('App, tomtilstand', () => {
     expect(within(column()).getByText(EMPTY_TITLE)).toBeInTheDocument()
   })
 })
+
+describe('App, fokus tilbake etter dialog', () => {
+  const TODOS = [
+    { id: 'a1', title: 'Dekkskift', description: '', dates: [{ month: 10, day: 15 }], createdAt: '2026-01-02T09:00:00.000Z' },
+  ]
+
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(TODOS))
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const column = () => screen.getByRole('complementary', { name: 'Denne måneden' })
+  const addButton = () => screen.getByRole('button', { name: '+ Legg til nytt gjøremål' })
+  // Clicking does not move focus in jsdom, so the opener is focused first, as a click or Tab would do
+  const open = (button: HTMLElement) => {
+    button.focus()
+    fireEvent.click(button)
+  }
+
+  it('går til «+ Legg til nytt gjøremål» når skjemaet lukkes', () => {
+    render(<App />)
+    open(addButton())
+    fireEvent.click(screen.getByRole('button', { name: 'Avbryt' }))
+    expect(addButton()).toHaveFocus()
+  })
+
+  it('går til tittelen på kortet når visningen lukkes', () => {
+    render(<App />)
+    const title = within(column()).getByRole('button', { name: 'Dekkskift' })
+    open(title)
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Dekkskift' })).getByRole('button', { name: 'Lukk' }))
+    expect(title).toHaveFocus()
+  })
+
+  it('går til prikken når visningen og så skjemaet lukkes', () => {
+    render(<App />)
+    const dot = screen.getByRole('button', { name: 'Dekkskift, 15. oktober' })
+    open(dot)
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Dekkskift' })).getByRole('button', { name: 'Rediger' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Avbryt' }))
+    expect(dot).toHaveFocus()
+  })
+
+  it('går til «Rediger» når redigeringen er lagret', () => {
+    render(<App />)
+    open(within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: 'Dekkskift til vinter' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    expect(within(column()).getByRole('button', { name: 'Rediger «Dekkskift til vinter»' })).toHaveFocus()
+  })
+
+  it('går til «Slett» når bekreftelsen avbrytes', () => {
+    render(<App />)
+    const remove = within(column()).getByRole('button', { name: 'Slett «Dekkskift»' })
+    open(remove)
+    fireEvent.click(screen.getByRole('button', { name: 'Avbryt' }))
+    expect(remove).toHaveFocus()
+  })
+
+  it('går til «+ Legg til nytt gjøremål» når kortet som åpnet dialogen er slettet', () => {
+    render(<App />)
+    open(within(column()).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, slett' }))
+    expect(addButton()).toHaveFocus()
+  })
+})

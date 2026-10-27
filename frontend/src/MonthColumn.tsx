@@ -69,7 +69,7 @@ const only = (action: () => void) => (event: MouseEvent) => {
   action()
 }
 
-// The whole card can be clicked. Keyboard access to it comes in #22.
+// The whole card can be clicked; the title is a button, so the keyboard reaches it too
 function MonthCard({ item: { todo, dates }, today, onOpen, onEdit, onDelete }: MonthCardProps) {
   return (
     <article className="card" onClick={onOpen}>
@@ -78,7 +78,11 @@ function MonthCard({ item: { todo, dates }, today, onOpen, onEdit, onDelete }: M
           <DateBadge key={date.day} date={date} today={today} />
         ))}
       </div>
-      <h3>{todo.title}</h3>
+      <h3>
+        <button type="button" className="card-title" onClick={only(onOpen)}>
+          {todo.title}
+        </button>
+      </h3>
       {todo.description !== '' && <p className="desc">{todo.description}</p>}
       <div className="actions">
         <button type="button" className="btn secondary" aria-label={`Rediger «${todo.title}»`} onClick={only(onEdit)}>
