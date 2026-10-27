@@ -207,6 +207,12 @@ describe('placeDots, nabodatoer og ytelse', () => {
     expect(placeDots(todos, 2026)).toHaveLength(4)
   })
 
+  it('deler plassene på dagen mellom 28. og 29. februar når det er trangt i år uten skuddår', () => {
+    // So many that the slots for the day run out, and the dates must share them
+    const todos = Array.from({ length: 24 }, (_, i) => todo(`f${String(i)}`, [2, i < 12 ? 28 : 29]))
+    expectAllPositionsDifferent(todos, 2026)
+  })
+
   it('gir 29. og 28. februar hver sin plass i skuddår også', () => {
     const todos = [todo('a', [2, 29], [2, 28]), todo('b', [2, 28]), todo('c', [2, 29])]
     expectAllPositionsDifferent(todos, 2024)

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { loadTodos, saveTodos, type Todo } from './storage.ts'
 import {
   createTodo,
@@ -111,6 +111,22 @@ describe('validateForm, datoer som ikke finnes', () => {
 
   it('lagrer 29. februar som 29. februar, uansett år', () => {
     expect(validateForm(values('Skuddårsdugnad', '29.02'))).toMatchObject({ ok: true, draft: { dates: [{ month: 2, day: 29 }] } })
+  })
+})
+
+describe('validateForm, skuddår og vanlig år med styrt dato', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it.each([2026, 2027, 2028, 2100])('godtar 29.02 og avviser 30.02 når det er %i', (year) => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(year, 5, 15))
+    expect(validateForm(values('Skuddårsdugnad', '29.02'))).toMatchObject({ ok: true, draft: { dates: [{ month: 2, day: 29 }] } })
+    expect(validateForm(values('Skuddårsdugnad', '30.02'))).toEqual({
+      ok: false,
+      errors: { ...noErrors, dates: ['30. februar finnes ikke i kalenderen.'] },
+    })
   })
 })
 

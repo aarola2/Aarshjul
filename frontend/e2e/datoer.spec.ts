@@ -75,11 +75,17 @@ test('tekst som ikke er en dato på formen dd.mm, dd/mm eller dd-mm avvises med 
 })
 
 test('29. februar kan lagres', async ({ page }) => {
-  await open(page, '2028-02-10T12:00:00')
+  // Saved in a year without a leap day
+  await open(page, '2026-02-10T12:00:00')
   await tryToSave(page, 'Skuddårsdugnad', '29.02')
   await expect(form(page)).toHaveCount(0)
   const todos = JSON.parse((await stored(page)) ?? '[]') as { dates: unknown }[]
   expect(todos[0]?.dates).toEqual([{ month: 2, day: 29 }])
+  await expect(dots(page)).toHaveCount(1)
+
+  // Kept as 29 February, so it shows on its own day in a leap year
+  await page.clock.setFixedTime(new Date('2028-02-10T12:00:00'))
+  await page.reload()
   await expect(column(page).getByRole('article').getByText('29. feb', { exact: true })).toBeVisible()
   await expect(dots(page)).toHaveCount(1)
 })

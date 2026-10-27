@@ -139,4 +139,10 @@ describe('TodoViewDialog, 29. februar', () => {
     render(<TodoViewDialog todo={TODO} today={new Date(2026, 9, 27)} onClose={vi.fn()} />)
     expect(within(dialog()).queryByText(HINT)).toBeNull()
   })
+
+  it('har ingen forklaring for andre datoer i februar', () => {
+    const february: Todo = { ...LEAP, dates: [{ month: 2, day: 28 }, { month: 2, day: 1 }] }
+    render(<TodoViewDialog todo={february} today={new Date(2026, 9, 27)} onClose={vi.fn()} />)
+    expect(within(leapDialog()).queryByText(HINT)).toBeNull()
+  })
 })
