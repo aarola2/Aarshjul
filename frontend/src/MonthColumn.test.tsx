@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import MonthColumn from './MonthColumn.tsx'
 import type { Todo } from './storage.ts'
 
@@ -90,5 +90,26 @@ describe('MonthColumn', () => {
   it('viser ingen kort når ingen gjøremål har dato i måneden', () => {
     renderColumn(new Date(2026, 0, 10))
     expect(cards()).toHaveLength(0)
+  })
+})
+
+describe('MonthColumn, klikk på kort', () => {
+  it('sender id-en til gjøremålet når kortet klikkes, uansett hvor på kortet', () => {
+    const onOpenTodo = vi.fn()
+    render(<MonthColumn today={TODAY} todos={TODOS} onOpenTodo={onOpenTodo} />)
+    fireEvent.click(cardTitled('Dekkskift'))
+    expect(onOpenTodo).toHaveBeenLastCalledWith('a1')
+    fireEvent.click(within(cardTitled('Rense takrennene')).getByRole('heading', { level: 3 }))
+    expect(onOpenTodo).toHaveBeenLastCalledWith('c3')
+    fireEvent.click(within(cardTitled('Bestille feiing')).getByText('I dag · 26. okt'))
+    expect(onOpenTodo).toHaveBeenLastCalledWith('d4')
+    expect(onOpenTodo).toHaveBeenCalledTimes(3)
+  })
+
+  it('kan klikkes uten at noen lytter', () => {
+    renderColumn()
+    expect(() => {
+      fireEvent.click(cardTitled('Dekkskift'))
+    }).not.toThrow()
   })
 })

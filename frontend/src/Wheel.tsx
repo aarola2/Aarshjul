@@ -24,6 +24,7 @@ import {
 interface WheelProps {
   today: Date
   todos?: readonly Todo[]
+  onOpenTodo?: (id: string) => void
 }
 
 interface Tooltip {
@@ -39,7 +40,7 @@ const NO_TODOS: readonly Todo[] = []
 
 const labelArcId = (month: number) => `month-arc-${String(month)}`
 
-export default function Wheel({ today, todos = NO_TODOS }: WheelProps) {
+export default function Wheel({ today, todos = NO_TODOS, onOpenTodo }: WheelProps) {
   const year = today.getFullYear()
   const isToday = (month: number, day: number) => month === today.getMonth() + 1 && day === today.getDate()
   const [tooltip, setTooltip] = useState<Tooltip | null>(null)
@@ -97,6 +98,9 @@ export default function Wheel({ today, todos = NO_TODOS }: WheelProps) {
               }}
               onMouseLeave={() => {
                 setTooltip(null)
+              }}
+              onClick={() => {
+                onOpenTodo?.(todo.id)
               }}
             >
               <circle className="dot-mark" cx={cx} cy={cy} r={7} />
