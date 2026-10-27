@@ -171,3 +171,33 @@ describe('MonthColumn, slett', () => {
     }).not.toThrow()
   })
 })
+
+describe('MonthColumn, tomtilstand', () => {
+  const EMPTY_TITLE = 'Ingen oppgaver denne måneden'
+
+  it('viser «Ingen oppgaver denne måneden» uten gjøremål', () => {
+    renderColumn(TODAY, [])
+    expect(screen.getByText(EMPTY_TITLE)).toBeInTheDocument()
+    expect(cards()).toHaveLength(0)
+  })
+
+  it('viser tomtilstanden når alle gjøremålene er i andre måneder', () => {
+    renderColumn(new Date(2026, 0, 10))
+    expect(screen.getByText(EMPTY_TITLE)).toBeInTheDocument()
+  })
+
+  it.each([
+    [new Date(2026, 9, 27), 'oktober'],
+    [new Date(2027, 0, 10), 'januar'],
+    [new Date(2026, 4, 1), 'mai'],
+  ])('forklarer med månedsnavnet (%s)', (today, month) => {
+    renderColumn(today, [])
+    expect(screen.getByText(`Gjøremål med en dato i ${month} dukker opp her.`)).toBeInTheDocument()
+  })
+
+  it('viser ikke tomtilstanden når måneden har et gjøremål', () => {
+    renderColumn()
+    expect(screen.queryByText(EMPTY_TITLE)).toBeNull()
+    expect(screen.queryByText(/dukker opp her/)).toBeNull()
+  })
+})

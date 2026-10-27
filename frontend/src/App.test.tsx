@@ -534,3 +534,48 @@ describe('App, ødelagte data', () => {
     expect(header.contains(alert) || main.contains(alert)).toBe(false)
   })
 })
+
+describe('App, tomtilstand', () => {
+  const EMPTY_TITLE = 'Ingen oppgaver denne måneden'
+
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const column = () => screen.getByRole('complementary', { name: 'Denne måneden' })
+  const addTodo = (title: string, date: string) => {
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: title } })
+    fireEvent.change(screen.getByLabelText('Dato 1'), { target: { value: date } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+  }
+
+  it('forsvinner når et gjøremål i måneden legges til, men ikke for en annen måned', () => {
+    render(<App />)
+    expect(within(column()).getByText(EMPTY_TITLE)).toBeInTheDocument()
+    addTodo('Vårvask', '1.5')
+    expect(within(column()).getByText(EMPTY_TITLE)).toBeInTheDocument()
+    addTodo('Dekkskift', '15.10')
+    expect(within(column()).queryByText(EMPTY_TITLE)).toBeNull()
+  })
+
+  it('kommer tilbake når det siste kortet i måneden slettes', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        { id: 'a1', title: 'Dekkskift', description: '', dates: [{ month: 10, day: 15 }], createdAt: '2026-01-02T09:00:00.000Z' },
+      ]),
+    )
+    render(<App />)
+    expect(within(column()).queryByText(EMPTY_TITLE)).toBeNull()
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, slett' }))
+    expect(within(column()).getByText(EMPTY_TITLE)).toBeInTheDocument()
+  })
+})
