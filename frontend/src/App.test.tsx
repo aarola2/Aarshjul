@@ -531,6 +531,127 @@ describe('App, ødelagte data', () => {
   })
 })
 
+describe('App, lagring som feiler', () => {
+  const TODOS = [
+    { id: 'a1', title: 'Dekkskift', description: '', dates: [{ month: 10, day: 15 }], createdAt: '2026-02-03T10:00:00.000Z' },
+  ]
+  const STORED = JSON.stringify(TODOS)
+  const SAVE_FAILED = 'Kunne ikke lagre. Lagringen i nettleseren er full eller blokkert.'
+  const DELETE_FAILED = 'Kunne ikke slette. Lagringen i nettleseren er full eller blokkert.'
+
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(STORAGE_KEY, STORED)
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  const column = () => screen.getByRole('complementary', { name: 'Denne måneden' })
+  const form = () => screen.getByRole('dialog', { name: 'Nytt gjøremål' })
+  const confirm = () => screen.getByRole('dialog', { name: 'Er du sikker?' })
+  const failWrites = () =>
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Full', 'QuotaExceededError')
+    })
+  const addTodo = (title: string, date: string) => {
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: title } })
+    fireEvent.change(screen.getByLabelText('Dato 1'), { target: { value: date } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+  }
+
+  it('starter med tom liste og et varsel når nettleseren sperrer lagringen', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Sperret', 'SecurityError')
+    })
+    render(<App />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Nettleseren tillater ikke lagring.')
+    expect(screen.queryAllByTestId('prikk')).toHaveLength(0)
+    expect(within(column()).getByText('Ingen oppgaver denne måneden')).toBeInTheDocument()
+  })
+
+  it('varselet om sperret lagring kan lukkes', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Sperret', 'SecurityError')
+    })
+    render(<App />)
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Lukk' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('viser ingen varsel når lagringen virker', () => {
+    render(<App />)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('lar skjemaet stå åpent med melding når et nytt gjøremål ikke kan lagres', () => {
+    render(<App />)
+    failWrites()
+    addTodo('Rense takrennene', '03.10')
+    expect(within(form()).getByRole('alert')).toHaveTextContent(SAVE_FAILED)
+    expect(screen.getAllByTestId('prikk')).toHaveLength(1)
+    expect(within(column()).queryByRole('heading', { level: 3, name: 'Rense takrennene' })).toBeNull()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(STORED)
+  })
+
+  it('lar redigeringen stå åpen med melding, og gjøremålet er uendret', () => {
+    render(<App />)
+    failWrites()
+    fireEvent.click(within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: 'Dekkskift til vinter' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    const editForm = screen.getByRole('dialog', { name: 'Rediger gjøremål' })
+    expect(within(editForm).getByRole('alert')).toHaveTextContent(SAVE_FAILED)
+    expect(within(column()).getByRole('heading', { level: 3, name: 'Dekkskift' })).toBeInTheDocument()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(STORED)
+  })
+
+  it('starter uten melding når skjemaet åpnes på nytt', () => {
+    render(<App />)
+    failWrites()
+    addTodo('Rense takrennene', '03.10')
+    fireEvent.click(within(form()).getByRole('button', { name: 'Avbryt' }))
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(form()).queryByRole('alert')).toBeNull()
+  })
+
+  it('lagrer og lukker skjemaet når lagringen virker igjen', () => {
+    render(<App />)
+    const spy = failWrites()
+    addTodo('Rense takrennene', '03.10')
+    spy.mockRestore()
+    fireEvent.click(within(form()).getByRole('button', { name: 'Lagre' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(within(column()).getByRole('heading', { level: 3, name: 'Rense takrennene' })).toBeInTheDocument()
+  })
+
+  it('lar bekreftelsen stå med melding når slettingen ikke kan lagres, og gjøremålet blir', () => {
+    render(<App />)
+    failWrites()
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Ja, slett' }))
+    expect(within(confirm()).getByRole('alert')).toHaveTextContent(DELETE_FAILED)
+    expect(screen.getAllByTestId('prikk')).toHaveLength(1)
+    expect(within(column()).getByRole('heading', { level: 3, name: 'Dekkskift' })).toBeInTheDocument()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(STORED)
+  })
+
+  it('starter uten melding når bekreftelsen åpnes på nytt', () => {
+    render(<App />)
+    failWrites()
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Ja, slett' }))
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Avbryt' }))
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    expect(within(confirm()).queryByRole('alert')).toBeNull()
+  })
+})
+
 describe('App, tomtilstand', () => {
   const EMPTY_TITLE = 'Ingen oppgaver denne måneden'
 

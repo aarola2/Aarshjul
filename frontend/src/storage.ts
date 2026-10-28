@@ -11,8 +11,8 @@ export interface Todo {
   createdAt: string
 }
 
-// raw is the stored text exactly as it was, so a copy of it can be kept
-export type LoadResult = { status: 'ok'; todos: Todo[] } | { status: 'corrupt'; raw: string }
+// raw is the stored text exactly as it was, so a copy of it can be kept. blocked: the browser does not allow storage.
+export type LoadResult = { status: 'ok'; todos: Todo[] } | { status: 'corrupt'; raw: string } | { status: 'blocked' }
 
 export const STORAGE_KEY = 'aarhjul:v1:todos'
 export const CORRUPT_COPY_KEY = 'aarhjul:v1:corrupt-copy'
@@ -25,12 +25,19 @@ const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 const TODO_KEYS = ['id', 'title', 'description', 'dates', 'createdAt']
 const DATE_KEYS = ['month', 'day']
 
-export function saveTodos(todos: readonly Todo[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
+// Returns false when storage refuses it, because it is full or blocked, so the app can keep what is shown as it was
+export function saveTodos(todos: readonly Todo[]): boolean {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function loadTodos(): LoadResult {
-  const raw = localStorage.getItem(STORAGE_KEY)
+  const raw = readStored()
+  if (raw === undefined) return { status: 'blocked' }
   if (raw === null) return { status: 'ok', todos: [] }
   const parsed = parseJson(raw)
   return isTodoList(parsed) ? { status: 'ok', todos: parsed } : { status: 'corrupt', raw }
@@ -44,6 +51,15 @@ export function keepCorruptCopy(raw: string): boolean {
     return true
   } catch {
     return false
+  }
+}
+
+// undefined when the browser blocks storage for the site; then even reaching localStorage throws
+function readStored(): string | null | undefined {
+  try {
+    return localStorage.getItem(STORAGE_KEY)
+  } catch {
+    return undefined
   }
 }
 

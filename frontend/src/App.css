@@ -194,6 +194,7 @@ textarea { resize: vertical; }
 [aria-invalid="true"] { border-color: var(--error) !important; }
 .field-error { color: var(--error); margin: 6px 0 0; font-size: 14px; font-weight: 600; }
 .field-error:empty { display: none; }
+.dlg-error { color: var(--error); margin: 16px 0 0; font-size: 14px; font-weight: 600; }
 fieldset { border: 0; padding: 0; min-width: 0; }
 fieldset legend { padding: 0; }
 .hint { color: var(--muted); font-size: 14px; margin: 0 0 8px; }

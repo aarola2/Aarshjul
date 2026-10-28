@@ -13,6 +13,8 @@ import { closeOnEscape, useModalDialog } from './useModalDialog.ts'
 interface TodoFormDialogProps {
   // The todo being edited; left out for a new one
   initial?: TodoDraft | undefined
+  // true when the last valid save could not be stored
+  hasSaveFailed?: boolean
   onSave: (draft: TodoDraft) => void
   onClose: () => void
 }
@@ -44,7 +46,7 @@ function firstInvalidField(errors: FormErrors): string | undefined {
 }
 
 // The form is mounted when it opens and unmounted when it closes, so it always starts from `initial`
-export default function TodoFormDialog({ initial, onSave, onClose }: TodoFormDialogProps) {
+export default function TodoFormDialog({ initial, hasSaveFailed = false, onSave, onClose }: TodoFormDialogProps) {
   const dialogRef = useModalDialog()
   const formRef = useRef<HTMLFormElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
@@ -186,6 +188,11 @@ export default function TodoFormDialog({ initial, onSave, onClose }: TodoFormDia
             <p className="hint">Maks {MAX_DATES} datoer per gjøremål.</p>
           )}
         </fieldset>
+        {hasSaveFailed && (
+          <p className="dlg-error" role="alert">
+            Kunne ikke lagre. Lagringen i nettleseren er full eller blokkert.
+          </p>
+        )}
         <div className="dlg-actions">
           <button type="button" className="btn secondary" onClick={onClose}>
             Avbryt

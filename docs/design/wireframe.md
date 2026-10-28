@@ -46,6 +46,9 @@ Tatt uendret fra referansen:
 | Kan kopien av ødelagte data ikke lagres (full lagring), avsluttes varselet med «Kopien kunne ikke lagres i nettleseren. Last ned kopien før du lagrer noe nytt.» i stedet for «En kopi av de ødelagte dataene er tatt vare på.» | Ellers lover meldingen noe som ikke stemmer, og dataene kan gå tapt i det stille. Besluttet av eier i #19. |
 | I «Vis gjøremål» står «29. februar vises som 28. februar i år uten skuddår.» når det gjelder | Gjør regelen fra brukerhistorien synlig for brukeren. |
 | Kalendervelgeren er nettleserens egen datovelger | Den kan ikke velge 29. februar i år uten skuddår; da skrives datoen inn. |
+| Blokkerer nettleseren lagring, vises en varselstripe i samme stil som for ødelagte data: «Nettleseren tillater ikke lagring. Gjøremål kan ikke lagres før du tillater nettstedsdata for denne siden.» med «Lukk». Appen starter med tom liste. | Ellers blir siden hvit. Gjøremål holdes ikke bare i minnet, for da ville de forsvinne ved neste innlasting. Besluttet av eier i #46. |
+| Kan et gjøremål ikke lagres, blir skjemaet stående åpent med «Kunne ikke lagre. Lagringen i nettleseren er full eller blokkert.» over knappene | Brukeren skal ikke tro at noe er lagret. Besluttet av eier i #46. |
+| Kan en sletting ikke lagres, blir «Er du sikker?» stående med «Kunne ikke slette. Lagringen i nettleseren er full eller blokkert.» over knappene | Gjøremålet skal ikke forsvinne fra skjermen når det fortsatt er lagret. Besluttet av eier i #46. |
 | Prototypemenyen nederst til venstre | Bare for å vise tilstander i prototypen. Bygges ikke. Den er lukket fra start og dekker deler av hjulet når den er åpen. |
 
 ## Skjermer og tilstander

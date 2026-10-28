@@ -62,4 +62,16 @@ describe('ConfirmDeleteDialog', () => {
     expect(onClose).toHaveBeenCalledOnce()
     expect(onConfirm).not.toHaveBeenCalled()
   })
+
+  it('viser et varsel når slettingen ikke kunne lagres', () => {
+    render(<ConfirmDeleteDialog title="Dekkskift" hasDeleteFailed onConfirm={vi.fn()} onClose={vi.fn()} />)
+    expect(within(dialog()).getByRole('alert')).toHaveTextContent(
+      'Kunne ikke slette. Lagringen i nettleseren er full eller blokkert.',
+    )
+  })
+
+  it('har ikke noe varsel så lenge slettingen ikke har feilet', () => {
+    renderConfirm()
+    expect(within(dialog()).queryByRole('alert')).toBeNull()
+  })
 })

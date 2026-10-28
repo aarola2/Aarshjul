@@ -3,11 +3,13 @@ import { closeOnEscape, useModalDialog } from './useModalDialog.ts'
 
 interface ConfirmDeleteDialogProps {
   title: string
+  // true when the last «Ja, slett» could not be stored
+  hasDeleteFailed?: boolean
   onConfirm: () => void
   onClose: () => void
 }
 
-export default function ConfirmDeleteDialog({ title, onConfirm, onClose }: ConfirmDeleteDialogProps) {
+export default function ConfirmDeleteDialog({ title, hasDeleteFailed = false, onConfirm, onClose }: ConfirmDeleteDialogProps) {
   const dialogRef = useModalDialog()
   const cancelRef = useRef<HTMLButtonElement>(null)
   const id = useId()
@@ -28,6 +30,11 @@ export default function ConfirmDeleteDialog({ title, onConfirm, onClose }: Confi
         </button>
         <h2 id={`${id}-title`}>Er du sikker?</h2>
         <p id={`${id}-text`}>«{title}» slettes. Dette kan ikke angres.</p>
+        {hasDeleteFailed && (
+          <p className="dlg-error" role="alert">
+            Kunne ikke slette. Lagringen i nettleseren er full eller blokkert.
+          </p>
+        )}
         <div className="dlg-actions">
           <button ref={cancelRef} type="button" className="btn secondary" onClick={onClose}>
             Avbryt

@@ -20,9 +20,9 @@ flowchart LR
 ```
 
 Hovedflyten:
-1. `App` leser lagringen én gang ved oppstart (`loadTodos`). Er dataene gyldige, blir de tilstanden. Er de ødelagte, starter appen med en tom liste og viser en melding. Den prøver å ta vare på en kopi i lagringen. Går ikke det, for eksempel fordi lagringen er full, kan kopien bare lastes ned fra meldingen.
+1. `App` leser lagringen én gang ved oppstart (`loadTodos`). Er dataene gyldige, blir de tilstanden. Er de ødelagte, starter appen med en tom liste og viser en melding. Den prøver å ta vare på en kopi i lagringen. Går ikke det, for eksempel fordi lagringen er full, kan kopien bare lastes ned fra meldingen. Blokkerer nettleseren lagring, starter appen med en tom liste og viser en melding om det.
 2. Brukeren fyller ut skjemaet. `todoForm.ts` validerer tittel, beskrivelse og datoer og gir enten et utkast eller feilmeldinger per felt.
-3. `App` lagrer først og oppdaterer tilstanden etterpå. Hjulet og sidekolonnen viser derfor aldri noe som ikke er lagret.
+3. `App` lagrer først og oppdaterer tilstanden etterpå. Hjulet og sidekolonnen viser derfor aldri noe som ikke er lagret. Feiler lagringen (full eller blokkert), endres ingenting, og dialogen blir stående med en melding.
 4. Hjulet og sidekolonnen tegnes ut fra tilstanden og dagens dato (`useToday`).
 
 ## Deler
@@ -45,7 +45,8 @@ All kode ligger i `frontend/src`. Testene ligger ved siden av koden (`*.test.ts(
 | `ConfirmDeleteDialog.tsx` | «Er du sikker?» før sletting. «Avbryt» har fokus, så et feiltrykk på Enter ikke sletter. |
 | `useModalDialog.ts` | Felles oppførsel for dialogene: åpnes modalt, Esc lukker, og fokus går tilbake dit brukeren kom fra. |
 | `CorruptDataAlert.tsx` | Meldingen om ødelagte data, med knapp for å laste ned kopien. |
-| `storage.ts` | Datamodellen (`Todo`, `TodoDate`), nøklene og grensene, og lesing, lagring og validering av alt som leses fra `localStorage`. |
+| `StorageBlockedAlert.tsx` | Meldingen om at nettleseren ikke tillater lagring. |
+| `storage.ts` | Datamodellen (`Todo`, `TodoDate`), nøklene og grensene, og lesing, lagring og validering av alt som leses fra `localStorage`. Kaster aldri: lesing gir `blocked` når lagringen er sperret, og `saveTodos` gir `false` når den feiler. |
 | `useToday.ts` | Dagens dato fra nettleseren. Den oppdateres ved midnatt og når fanen blir synlig igjen. |
 
 **Datamodell.** Et gjøremål har `id`, `title` (1–60 tegn), `description` (0–500 tegn), `dates` (1–12 unike `{ month, day }`) og `createdAt` (ISO-tidsstempel). Det finnes ikke noe år, for alt gjentas hvert år. 29. februar lagres som det er og vises 28. februar i år uten skuddår.
@@ -108,7 +109,8 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 | Symptom | Årsak og hva du gjør |
 |---|---|
 | Meldingen «Lagrede data var ødelagt» | Innholdet i `aarhjul:v1:todos` besto ikke valideringen i `storage.ts`. Last ned kopien fra meldingen, eller les `aarhjul:v1:corrupt-copy` i utviklerverktøyene (Application → Local Storage). |
-| Hvit side og feil i konsollen om `localStorage` | Nettleseren blokkerer lagring for nettstedet, og appen håndterer ikke det ennå (#46). Tillat nettstedsdata for adressen. |
+| Meldingen «Nettleseren tillater ikke lagring» | Nettleseren blokkerer lagring for nettstedet. Tillat nettstedsdata for adressen. |
+| «Kunne ikke lagre» eller «Kunne ikke slette» i en dialog | Lagringen er full eller blokkert. Ingenting er endret. Frigjør plass (for eksempel ved å slette nettstedsdata for andre sider på `aarola2.github.io`) eller tillat lagring, og prøv igjen. |
 | Endringer forsvinner når appen er åpen i to faner | Den siste fanen som lagrer, overskriver den andre (#47). Bruk én fane. |
 | Lokal e2e gir rare resultater | `reuseExistingServer` er på lokalt, så Playwright gjenbruker det som allerede kjører på port 5173. Sjekk med `lsof -nP -iTCP:5173 -sTCP:LISTEN`, og stopp den andre serveren. |
 | En e2e-test feiler bare på visse datoer | Testen bruker dagens dato uten å låse klokka. Bruk `page.clock.setFixedTime`. |
@@ -143,7 +145,6 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 
 **Åpne risikoer** (har egne issues)
 - Appen har ingen Content-Security-Policy (#45).
-- Lagring som er blokkert eller full, håndteres ikke (#46).
 - Endringer fra andre faner overskrives (#47).
 - Dependabot har ingen ventetid før nye versjoner (#49).
 

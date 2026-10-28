@@ -4,6 +4,7 @@ import ConfirmDeleteDialog from './ConfirmDeleteDialog.tsx'
 import CorruptDataAlert from './CorruptDataAlert.tsx'
 import MonthColumn from './MonthColumn.tsx'
 import { keepCorruptCopy, loadTodos, saveTodos, type Todo } from './storage.ts'
+import StorageBlockedAlert from './StorageBlockedAlert.tsx'
 import { createTodo, removeTodo, type TodoDraft, updateTodo } from './todoForm.ts'
 import TodoFormDialog from './TodoFormDialog.tsx'
 import TodoViewDialog from './TodoViewDialog.tsx'
@@ -14,10 +15,12 @@ type FormState = { kind: 'new' } | { kind: 'edit'; id: string } | null
 
 export default function App() {
   const today = useToday()
-  // Read once at start. Corrupt data gives an empty list, a copy kept aside and a warning.
+  // Read once at start. Corrupt data gives an empty list, a copy kept aside and a warning;
+  // blocked storage gives an empty list and a warning.
   const [loaded] = useState(loadTodos)
   const [todos, setTodos] = useState<Todo[]>(loaded.status === 'ok' ? loaded.todos : [])
   const [corruptRaw, setCorruptRaw] = useState(loaded.status === 'corrupt' ? loaded.raw : null)
+  const [isBlockedShown, setBlockedShown] = useState(loaded.status === 'blocked')
   // Kept before anything can be saved over the corrupt data. Writing the same text twice in StrictMode does no harm.
   const [isCopyKept] = useState(() => loaded.status !== 'corrupt' || keepCorruptCopy(loaded.raw))
   const [form, setForm] = useState<FormState>(null)
@@ -28,16 +31,21 @@ export default function App() {
   const isFormShown = form?.kind === 'new' || editing !== undefined
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const deleting = todos.find((todo) => todo.id === deletingId)
+  // The open dialog stays open with a message when what it did could not be stored
+  const [hasStoreFailed, setStoreFailed] = useState(false)
 
   // Saved first, so the wheel and the column never show anything that is not stored
   const store = (next: Todo[]) => {
-    saveTodos(next)
-    setTodos(next)
+    const isStored = saveTodos(next)
+    if (isStored) setTodos(next)
+    setStoreFailed(!isStored)
+    return isStored
   }
 
   const saveTodo = (draft: TodoDraft) => {
-    store(editing ? updateTodo(todos, editing.id, draft) : [...todos, createTodo(draft, todos, new Date())])
-    setForm(null)
+    if (store(editing ? updateTodo(todos, editing.id, draft) : [...todos, createTodo(draft, todos, new Date())])) {
+      setForm(null)
+    }
   }
 
   const askToDelete = (id: string) => {
@@ -46,8 +54,17 @@ export default function App() {
   }
 
   const deleteTodo = (id: string) => {
-    store(removeTodo(todos, id))
+    if (store(removeTodo(todos, id))) setDeletingId(null)
+  }
+
+  const closeForm = () => {
+    setForm(null)
+    setStoreFailed(false)
+  }
+
+  const closeConfirm = () => {
     setDeletingId(null)
+    setStoreFailed(false)
   }
 
   const editTodo = (id: string) => {
@@ -74,6 +91,13 @@ export default function App() {
           + Legg til nytt gjøremål
         </button>
       </header>
+      {isBlockedShown && (
+        <StorageBlockedAlert
+          onClose={() => {
+            setBlockedShown(false)
+          }}
+        />
+      )}
       {corruptRaw !== null && (
         <CorruptDataAlert
           raw={corruptRaw}
@@ -111,22 +135,15 @@ export default function App() {
       {deleting && (
         <ConfirmDeleteDialog
           title={deleting.title}
+          hasDeleteFailed={hasStoreFailed}
           onConfirm={() => {
             deleteTodo(deleting.id)
           }}
-          onClose={() => {
-            setDeletingId(null)
-          }}
+          onClose={closeConfirm}
         />
       )}
       {isFormShown && (
-        <TodoFormDialog
-          initial={editing}
-          onSave={saveTodo}
-          onClose={() => {
-            setForm(null)
-          }}
-        />
+        <TodoFormDialog initial={editing} hasSaveFailed={hasStoreFailed} onSave={saveTodo} onClose={closeForm} />
       )}
     </>
   )
