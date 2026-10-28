@@ -7,7 +7,9 @@ import { keepCorruptCopy, loadTodos, saveTodos, type Todo } from './storage.ts'
 import StorageBlockedAlert from './StorageBlockedAlert.tsx'
 import { createTodo, removeTodo, type TodoDraft, updateTodo } from './todoForm.ts'
 import TodoFormDialog from './TodoFormDialog.tsx'
+import TodoGoneAlert from './TodoGoneAlert.tsx'
 import TodoViewDialog from './TodoViewDialog.tsx'
+import { useOtherTabChanges } from './useOtherTabChanges.ts'
 import { useToday } from './useToday.ts'
 import Wheel from './Wheel.tsx'
 
@@ -15,14 +17,14 @@ type FormState = { kind: 'new' } | { kind: 'edit'; id: string } | null
 
 export default function App() {
   const today = useToday()
-  // Read once at start. Corrupt data gives an empty list, a copy kept aside and a warning;
+  // Read at start, and again when another tab changes the todos (below). Corrupt data gives an empty list, a copy kept aside and a warning;
   // blocked storage gives an empty list and a warning.
   const [loaded] = useState(loadTodos)
   const [todos, setTodos] = useState<Todo[]>(loaded.status === 'ok' ? loaded.todos : [])
   const [corruptRaw, setCorruptRaw] = useState(loaded.status === 'corrupt' ? loaded.raw : null)
   const [isBlockedShown, setBlockedShown] = useState(loaded.status === 'blocked')
   // Kept before anything can be saved over the corrupt data. Writing the same text twice in StrictMode does no harm.
-  const [isCopyKept] = useState(() => loaded.status !== 'corrupt' || keepCorruptCopy(loaded.raw))
+  const [isCopyKept, setCopyKept] = useState(() => loaded.status !== 'corrupt' || keepCorruptCopy(loaded.raw))
   const [form, setForm] = useState<FormState>(null)
   const [viewingId, setViewingId] = useState<string | null>(null)
   const viewing = todos.find((todo) => todo.id === viewingId)
@@ -33,6 +35,30 @@ export default function App() {
   const deleting = todos.find((todo) => todo.id === deletingId)
   // The open dialog stays open with a message when what it did could not be stored
   const [hasStoreFailed, setStoreFailed] = useState(false)
+  // The title of a todo that was open in a dialog when another tab deleted it
+  const [goneTitle, setGoneTitle] = useState<string | null>(null)
+  const openTodo = viewing ?? editing ?? deleting
+
+  // Closed with a message, so the todo can never be saved back by a form that was still open
+  const closeDialogsFor = (title: string) => {
+    setViewingId(null)
+    setForm(null)
+    setDeletingId(null)
+    setStoreFailed(false)
+    setGoneTitle(title)
+  }
+
+  // Read and checked again just as at start, so corrupt data gets the same warning and is never used
+  useOtherTabChanges(() => {
+    const next = loadTodos()
+    const nextTodos = next.status === 'ok' ? next.todos : []
+    if (next.status === 'corrupt') {
+      setCorruptRaw(next.raw)
+      setCopyKept(keepCorruptCopy(next.raw))
+    }
+    if (openTodo && !nextTodos.some((todo) => todo.id === openTodo.id)) closeDialogsFor(openTodo.title)
+    setTodos(nextTodos)
+  })
 
   // Saved first, so the wheel and the column never show anything that is not stored
   const store = (next: Todo[]) => {
@@ -95,6 +121,14 @@ export default function App() {
         <StorageBlockedAlert
           onClose={() => {
             setBlockedShown(false)
+          }}
+        />
+      )}
+      {goneTitle !== null && (
+        <TodoGoneAlert
+          title={goneTitle}
+          onClose={() => {
+            setGoneTitle(null)
           }}
         />
       )}

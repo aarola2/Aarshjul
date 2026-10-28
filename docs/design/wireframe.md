@@ -49,6 +49,7 @@ Tatt uendret fra referansen:
 | Blokkerer nettleseren lagring, vises en varselstripe i samme stil som for ødelagte data: «Nettleseren tillater ikke lagring. Gjøremål kan ikke lagres før du tillater nettstedsdata for denne siden.» med «Lukk». Appen starter med tom liste. | Ellers blir siden hvit. Gjøremål holdes ikke bare i minnet, for da ville de forsvinne ved neste innlasting. Besluttet av eier i #46. |
 | Kan et gjøremål ikke lagres, blir skjemaet stående åpent med «Kunne ikke lagre. Lagringen i nettleseren er full eller blokkert.» over knappene | Brukeren skal ikke tro at noe er lagret. Besluttet av eier i #46. |
 | Kan en sletting ikke lagres, blir «Er du sikker?» stående med «Kunne ikke slette. Lagringen i nettleseren er full eller blokkert.» over knappene | Gjøremålet skal ikke forsvinne fra skjermen når det fortsatt er lagret. Besluttet av eier i #46. |
+| Slettes et gjøremål i en annen fane mens det er åpent i visning, skjema eller «Er du sikker?», lukkes dialogen, og en varselstripe viser «Gjøremålet «Tittel» ble slettet i en annen fane.» med «Lukk». Fokus går til «+ Legg til nytt gjøremål». | Gjøremålet skal ikke stille gjenoppstå fra et skjema som var åpent. Et skjema med sperret «Lagre» ble valgt bort. Besluttet av eier i #47. |
 | Prototypemenyen nederst til venstre | Bare for å vise tilstander i prototypen. Bygges ikke. Den er lukket fra start og dekker deler av hjulet når den er åpen. |
 
 ## Skjermer og tilstander

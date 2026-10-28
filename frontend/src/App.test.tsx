@@ -669,6 +669,115 @@ describe('App, lagring som feiler', () => {
   })
 })
 
+describe('App, endringer fra en annen fane', () => {
+  const todo = (id: string, title: string, month: number, day: number) => ({
+    id,
+    title,
+    description: '',
+    dates: [{ month, day }],
+    createdAt: '2026-01-02T09:00:00.000Z',
+  })
+  const DEKKSKIFT = todo('a1', 'Dekkskift', 10, 15)
+  const GONE = 'Gjøremålet «Dekkskift» ble slettet i en annen fane.'
+
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([DEKKSKIFT]))
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const column = () => screen.getByRole('complementary', { name: 'Denne måneden' })
+  const cardTitle = (title: string) => within(column()).queryByRole('heading', { level: 3, name: title })
+  // What another tab does: it writes to storage, and this tab gets a storage event
+  const otherTabStores = (raw: string) => {
+    localStorage.setItem(STORAGE_KEY, raw)
+    fireEvent(window, new StorageEvent('storage', { key: STORAGE_KEY }))
+  }
+
+  it('viser gjøremål som en annen fane har lagret', () => {
+    render(<App />)
+    otherTabStores(JSON.stringify([DEKKSKIFT, todo('b2', 'Rense takrennene', 10, 3)]))
+    expect(screen.getAllByTestId('prikk')).toHaveLength(2)
+    expect(cardTitle('Rense takrennene')).toBeInTheDocument()
+  })
+
+  it('tar ikke i bruk ugyldige data, men viser varselet om ødelagte data og tar vare på en kopi', () => {
+    render(<App />)
+    otherTabStores('[{"id":')
+    expect(screen.getByRole('alert')).toHaveTextContent('Lagrede data var ødelagt.')
+    expect(screen.queryAllByTestId('prikk')).toHaveLength(0)
+    expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBe('[{"id":')
+  })
+
+  it('bygger videre på det den andre fanen har lagret', () => {
+    render(<App />)
+    otherTabStores(JSON.stringify([DEKKSKIFT, todo('b2', 'Rense takrennene', 10, 3)]))
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: 'Vårvask av garasjen' } })
+    fireEvent.change(screen.getByLabelText('Dato 1'), { target: { value: '20.10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    const stored = loadTodos()
+    if (stored.status !== 'ok') throw new Error('Lagringen kunne ikke leses')
+    expect(stored.todos.map((t) => t.title)).toEqual(['Dekkskift', 'Rense takrennene', 'Vårvask av garasjen'])
+  })
+
+  it.each([
+    ['visningen', () => within(column()).getByRole('button', { name: 'Dekkskift' })],
+    ['redigeringsskjemaet', () => within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' })],
+    ['bekreftelsen', () => within(column()).getByRole('button', { name: 'Slett «Dekkskift»' })],
+  ])('lukker %s og sier fra når gjøremålet slettes i en annen fane', (_name, opener) => {
+    render(<App />)
+    fireEvent.click(opener())
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    otherTabStores('[]')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('alert')).toHaveTextContent(GONE)
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('[]')
+  })
+
+  it('tar ikke med en gammel lagringsfeil til neste skjema når gjøremålet slettes i en annen fane', () => {
+    render(<App />)
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Full', 'QuotaExceededError')
+    })
+    fireEvent.click(within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    expect(within(screen.getByRole('dialog')).getByRole('alert')).toBeInTheDocument()
+    spy.mockRestore()
+
+    otherTabStores('[]')
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).queryByRole('alert')).toBeNull()
+  })
+
+  it('sier ikke fra når et gjøremål som ikke er åpent, slettes i en annen fane', () => {
+    render(<App />)
+    otherTabStores('[]')
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('varselet om at gjøremålet ble slettet, kan lukkes', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Dekkskift' }))
+    otherTabStores('[]')
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Lukk' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('viser den nye tittelen i visningen når gjøremålet endres i en annen fane', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Dekkskift' }))
+    otherTabStores(JSON.stringify([{ ...DEKKSKIFT, title: 'Dekkskift til vinter' }]))
+    expect(screen.getByRole('dialog', { name: 'Dekkskift til vinter' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+})
+
 describe('App, tomtilstand', () => {
   const EMPTY_TITLE = 'Ingen oppgaver denne måneden'
 

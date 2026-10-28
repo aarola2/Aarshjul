@@ -13,14 +13,14 @@ flowchart LR
   T -->|utkast| A[App]
   A -->|saveTodos| S[storage.ts]
   S <-->|JSON| L[(localStorage<br/>aarhjul:v1:todos)]
-  S -->|loadTodos + validering<br/>ved oppstart| A
+  S -->|loadTodos + validering<br/>ved oppstart og når<br/>en annen fane lagrer| A
   A --> W[Wheel]
   A --> M[MonthColumn]
   A --> V[TodoViewDialog /<br/>ConfirmDeleteDialog]
 ```
 
 Hovedflyten:
-1. `App` leser lagringen én gang ved oppstart (`loadTodos`). Er dataene gyldige, blir de tilstanden. Er de ødelagte, starter appen med en tom liste og viser en melding. Den prøver å ta vare på en kopi i lagringen. Går ikke det, for eksempel fordi lagringen er full, kan kopien bare lastes ned fra meldingen. Blokkerer nettleseren lagring, starter appen med en tom liste og viser en melding om det.
+1. `App` leser lagringen ved oppstart (`loadTodos`), og på nytt hver gang en annen fane endrer gjøremålene (`storage`-hendelsen, se `useOtherTabChanges`). Er dataene gyldige, blir de tilstanden. Er de ødelagte, blir listen tom og appen viser en melding. Den prøver å ta vare på en kopi i lagringen. Går ikke det, for eksempel fordi lagringen er full, kan kopien bare lastes ned fra meldingen. Blokkerer nettleseren lagring, starter appen med en tom liste og viser en melding om det.
 2. Brukeren fyller ut skjemaet. `todoForm.ts` validerer tittel, beskrivelse og datoer og gir enten et utkast eller feilmeldinger per felt.
 3. `App` lagrer først og oppdaterer tilstanden etterpå. Hjulet og sidekolonnen viser derfor aldri noe som ikke er lagret. Feiler lagringen (full eller blokkert), endres ingenting, og dialogen blir stående med en melding.
 4. Hjulet og sidekolonnen tegnes ut fra tilstanden og dagens dato (`useToday`).
@@ -48,6 +48,8 @@ All kode ligger i `frontend/src`. Testene ligger ved siden av koden (`*.test.ts(
 | `StorageBlockedAlert.tsx` | Meldingen om at nettleseren ikke tillater lagring. |
 | `storage.ts` | Datamodellen (`Todo`, `TodoDate`), nøklene og grensene, og lesing, lagring og validering av alt som leses fra `localStorage`. Kaster aldri: lesing gir `blocked` når lagringen er sperret, og `saveTodos` gir `false` når den feiler. |
 | `useToday.ts` | Dagens dato fra nettleseren. Den oppdateres ved midnatt og når fanen blir synlig igjen. |
+| `useOtherTabChanges.ts` | Lytter på `storage`-hendelsen og sier fra bare når en annen fane har endret `aarhjul:v1:todos` eller tømt lagringen. Andre nøkler på opprinnelsen ignoreres. |
+| `TodoGoneAlert.tsx` | Meldingen om at gjøremålet i en åpen dialog ble slettet i en annen fane. |
 
 **Datamodell.** Et gjøremål har `id`, `title` (1–60 tegn), `description` (0–500 tegn), `dates` (1–12 unike `{ month, day }`) og `createdAt` (ISO-tidsstempel). Det finnes ikke noe år, for alt gjentas hvert år. 29. februar lagres som det er og vises 28. februar i år uten skuddår.
 
@@ -111,7 +113,8 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 | Meldingen «Lagrede data var ødelagt» | Innholdet i `aarhjul:v1:todos` besto ikke valideringen i `storage.ts`. Last ned kopien fra meldingen, eller les `aarhjul:v1:corrupt-copy` i utviklerverktøyene (Application → Local Storage). |
 | Meldingen «Nettleseren tillater ikke lagring» | Nettleseren blokkerer lagring for nettstedet. Tillat nettstedsdata for adressen. |
 | «Kunne ikke lagre» eller «Kunne ikke slette» i en dialog | Lagringen er full eller blokkert. Ingenting er endret. Lagringen deles med andre prosjekter på `aarola2.github.io`, så frigjør plass ved å slette data i de andre appene, eller tillat lagring, og prøv igjen. Ikke slett nettstedsdata for hele adressen, for da forsvinner også gjøremålene her. |
-| Endringer forsvinner når appen er åpen i to faner | Den siste fanen som lagrer, overskriver den andre (#47). Bruk én fane. |
+| En dialog lukkes av seg selv med «… ble slettet i en annen fane» | Gjøremålet ble slettet i en annen fane mens dialogen var åpen. Det kan ikke lagres tilbake. |
+| Endringer i samme gjøremål fra to faner | Den siste fanen som lagrer akkurat det gjøremålet, vinner. Andre gjøremål påvirkes ikke, fordi hver fane leser lagringen på nytt når den andre lagrer. |
 | Lokal e2e gir rare resultater | `reuseExistingServer` er på lokalt, så Playwright gjenbruker det som allerede kjører på port 5173. Sjekk med `lsof -nP -iTCP:5173 -sTCP:LISTEN`, og stopp den andre serveren. |
 | En e2e-test feiler bare på visse datoer | Testen bruker dagens dato uten å låse klokka. Bruk `page.clock.setFixedTime`. |
 | `produksjon` står som skipped | Variabelen `PRODUKSJON_GODKJENNING_VERIFISERT` er ikke `true`, eller navn og verdi er byttet om. Jobben hoppes også over når `staging` feiler eller `bygg` er hoppet over (for eksempel fordi CI ikke var grønn). |
@@ -132,7 +135,7 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 
 | Grense | Tiltak |
 |---|---|
-| `localStorage` → appen | Alt som leses er ubetrodd. `storage.ts` sjekker nøyaktige nøkler, typer, lengder, gyldige datoer, unike id-er og datoer, og ISO-tidsstempel. Ugyldige data brukes ikke. Appen starter tomt, viser en melding og prøver å ta vare på en kopi. Kopien kan også lastes ned fra meldingen så lenge den vises. |
+| `localStorage` → appen | Alt som leses er ubetrodd, både ved oppstart og når en annen fane (eller en annen side på opprinnelsen) har endret nøkkelen. `storage.ts` sjekker nøyaktige nøkler, typer, lengder, gyldige datoer, unike id-er og datoer, og ISO-tidsstempel. Ugyldige data brukes ikke. Appen starter tomt, viser en melding og prøver å ta vare på en kopi. Kopien kan også lastes ned fra meldingen så lenge den vises. |
 | Skjemaet → appen | `todoForm.ts` validerer lengde og dato før noe lagres. Tekst vises bare gjennom React, som escaper den. Appen bruker ikke `dangerouslySetInnerHTML`, `innerHTML` eller `eval`. |
 | Nedlasting av ødelagte data | Kopien lastes ned som Blob med fast filnavn (`aarshjul-odelagte-data.json`) og typen `application/json`. Innholdet vises aldri på siden. |
 | Bygg og CI | Actions er festet til full SHA. Arbeidsflytene har `permissions: contents: read` som standard. Det finnes ingen `pull_request_target`. `persist-credentials: false`. gitleaks, CodeQL, `npm audit` og Dependabot. |
@@ -141,11 +144,10 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 **Godtatte risikoer**
 - **Delt opprinnelse.** Alle Pages-sider under `aarola2.github.io` kan lese, endre og slette `aarhjul:v1:*`. Et eventuelt rotrepo `aarola2.github.io` kan i tillegg registrere en service worker for hele opprinnelsen. Prefikset hindrer bare at nøkler kolliderer ved et uhell. Det er ingen sikkerhetsgrense. Risikoen er godtatt fordi bare eieren kan publisere på opprinnelsen og dataene er lite sensitive. Et eget domene er løsningen hvis det blir behov.
 - **Clickjacking.** GitHub Pages kan ikke sette `X-Frame-Options` eller `frame-ancestors`, og de virker ikke i en meta-tag. Moderne nettlesere deler opp lagringen for innrammede sider fra andre nettsteder, så en side som rammer inn appen, ser ikke brukerens data.
-- **Flere faner (godtatt til #47 er løst).** Appen leser lagringen bare ved oppstart, så den siste fanen som lagrer, overskriver den andre. Risikoen er godtatt fordi brukerhistorien gjelder én person på én PC, og konsekvensen er at data kan forsvinne, ikke at de lekker.
+- **Samtidige endringer i samme gjøremål.** Har to faner skjemaet åpent for det samme gjøremålet, vinner den som lagrer sist. Endringer i ulike gjøremål går ikke tapt. Risikoen er godtatt fordi brukerhistorien gjelder én person på én PC.
 
 **Åpne risikoer** (har egne issues)
 - Appen har ingen Content-Security-Policy (#45).
-- Endringer fra andre faner overskrives (#47).
 - Dependabot har ingen ventetid før nye versjoner (#49).
 
 **Ikke relevant, og hvorfor**
