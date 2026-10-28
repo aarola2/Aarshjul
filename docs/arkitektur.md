@@ -52,7 +52,7 @@ All kode ligger i `frontend/src`. Testene ligger ved siden av koden (`*.test.ts(
 | `TodoGoneAlert.tsx` | Meldingen om at gjøremålet i en åpen dialog ble slettet i en annen fane. |
 | `csp.ts` | Content-Security-Policy og en Vite-plugin som legger den inn som meta-tag først i `<head>` i bygget. Brukes av `vite.config.ts`, ikke av appen. |
 
-**Datamodell.** Listen har maks 500 gjøremål. Et gjøremål har `id` (1–64 tegn, appen lager UUID-er), `title` (1–60 tegn), `description` (0–500 tegn), `dates` (1–12 unike `{ month, day }`) og `createdAt` (ISO-tidsstempel). Det finnes ikke noe år, for alt gjentas hvert år. 29. februar lagres som det er og vises 28. februar i år uten skuddår. Lagrede data over grensene behandles som ødelagte. Grensen på 500 holder appen rask: 500 gjøremål med 12 datoer hver plasseres på hjulet på rundt 25 ms, mens noen tusen kunne fryse fanen.
+**Datamodell.** Listen har maks 250 gjøremål. Et gjøremål har `id` (1–64 tegn, appen lager UUID-er), `title` (1–60 tegn), `description` (0–500 tegn), `dates` (1–12 unike `{ month, day }`) og `createdAt` (ISO-tidsstempel). Det finnes ikke noe år, for alt gjentas hvert år. 29. februar lagres som det er og vises 28. februar i år uten skuddår. Lagrede data over grensene behandles som ødelagte. Grensen på 250 holder appen rask: 250 gjøremål med 12 datoer hver plasseres på hjulet på rundt 10 ms, og på rundt 0,45 s i verste tilfelle, når alle datoene ligger innenfor noen få dager. Plasseringen vokser raskt med antallet: 500 tok 3,3 s i verste tilfelle, og noen tusen kunne fryse fanen.
 
 **Nøkler i `localStorage`.** Nøklene har prefikset `aarhjul:v1:`, fordi alle Pages-sider under `aarola2.github.io` deler opprinnelse:
 - `aarhjul:v1:todos`: listen med gjøremål.

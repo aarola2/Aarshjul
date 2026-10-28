@@ -2,7 +2,7 @@ import { type BrowserContext, expect, test, type Page } from '@playwright/test'
 
 const STORAGE_KEY = 'aarhjul:v1:todos'
 const COPY_KEY = 'aarhjul:v1:corrupt-copy'
-const LIMIT = 'Du kan ha maks 500 gjøremål. Slett et gjøremål før du legger til et nytt.'
+const LIMIT = 'Du kan ha maks 250 gjøremål. Slett et gjøremål før du legger til et nytt.'
 
 const todo = (id: string, title: string, month: number, day: number) => ({
   id,
@@ -53,7 +53,7 @@ test('lagrede data over grensen behandles som ødelagte, ved oppstart og fra en 
   page,
   context,
 }) => {
-  const tooMany = JSON.stringify(todos(501))
+  const tooMany = JSON.stringify(todos(251))
   await openWith(page, tooMany)
   await expectTreatedAsCorrupt(page, tooMany)
 
@@ -64,21 +64,29 @@ test('lagrede data over grensen behandles som ødelagte, ved oppstart og fra en 
   await page.reload()
   await expectTreatedAsCorrupt(page, longId)
 
+  // The first tab starts again from one valid todo, so the change is visible
+  await page.evaluate(
+    ([key, value, copyKey]) => {
+      localStorage.setItem(key, value)
+      localStorage.removeItem(copyKey)
+    },
+    [STORAGE_KEY, JSON.stringify(todos(1)), COPY_KEY] as const,
+  )
+  await page.reload()
+  await expect(dots(page)).toHaveCount(1)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+
   // A second tab writes too many; the first tab gets a storage event and checks them like at start
   const other = await openTab(context)
-  await page.evaluate((key) => {
-    localStorage.removeItem(key)
-  }, COPY_KEY)
   await other.evaluate(([key, value]) => {
     localStorage.setItem(key, value)
   }, [STORAGE_KEY, tooMany] as const)
-  await expect.poll(() => read(page, COPY_KEY)).toBe(tooMany)
-  await expect(dots(page)).toHaveCount(0)
+  await expectTreatedAsCorrupt(page, tooMany)
 })
 
-test('skjemaet sier fra og lagrer ikke når grensen på 500 er nådd, men redigering virker', async ({ page }) => {
-  await openWith(page, JSON.stringify(todos(500)))
-  await expect(dots(page)).toHaveCount(500)
+test('skjemaet sier fra og lagrer ikke når grensen på 250 er nådd, men redigering virker', async ({ page }) => {
+  await openWith(page, JSON.stringify(todos(250)))
+  await expect(dots(page)).toHaveCount(250)
 
   await page.getByRole('button', { name: '+ Legg til nytt gjøremål' }).click()
   await expect(form(page, 'Nytt gjøremål').getByRole('alert')).toHaveText(LIMIT)
@@ -87,8 +95,8 @@ test('skjemaet sier fra og lagrer ikke når grensen på 500 er nådd, men redige
   await form(page, 'Nytt gjøremål').getByRole('button', { name: 'Lagre' }).click()
   await expect(form(page, 'Nytt gjøremål')).toBeVisible()
   await test.info().attach('melding om grensen', { body: await page.screenshot(), contentType: 'image/png' })
-  await expect(dots(page)).toHaveCount(500)
-  expect(await storedCount(page)).toBe(500)
+  await expect(dots(page)).toHaveCount(250)
+  expect(await storedCount(page)).toBe(250)
   await form(page, 'Nytt gjøremål').getByRole('button', { name: 'Avbryt' }).click()
 
   await column(page).getByRole('button', { name: 'Rediger «Dekkskift»' }).click()
@@ -96,5 +104,5 @@ test('skjemaet sier fra og lagrer ikke når grensen på 500 er nådd, men redige
   await form(page, 'Rediger gjøremål').getByLabel('Tittel').fill('Dekkskift til vinter')
   await form(page, 'Rediger gjøremål').getByRole('button', { name: 'Lagre' }).click()
   await expect(column(page).getByRole('heading', { name: 'Dekkskift til vinter' })).toBeVisible()
-  expect(await storedCount(page)).toBe(500)
+  expect(await storedCount(page)).toBe(250)
 })

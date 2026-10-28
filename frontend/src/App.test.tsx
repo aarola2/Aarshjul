@@ -778,10 +778,10 @@ describe('App, endringer fra en annen fane', () => {
   })
 })
 
-describe('App, grensen på 500 gjøremål', () => {
-  const LIMIT = 'Du kan ha maks 500 gjøremål. Slett et gjøremål før du legger til et nytt.'
+describe('App, grensen på 250 gjøremål', () => {
+  const LIMIT = 'Du kan ha maks 250 gjøremål. Slett et gjøremål før du legger til et nytt.'
   // One todo in October, so it has a card; the rest in January, so the column stays short
-  const FULL = Array.from({ length: 500 }, (_, i) => ({
+  const FULL = Array.from({ length: 250 }, (_, i) => ({
     id: `id-${String(i)}`,
     title: i === 0 ? 'Dekkskift' : `Gjøremål ${String(i)}`,
     description: '',
@@ -815,7 +815,7 @@ describe('App, grensen på 500 gjøremål', () => {
     fireEvent.change(screen.getByLabelText('Dato 1'), { target: { value: '15.10' } })
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
     expect(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).toBeInTheDocument()
-    expect(stored()).toHaveLength(500)
+    expect(stored()).toHaveLength(250)
   })
 
   it('lar deg fortsatt redigere et gjøremål', () => {
@@ -827,16 +827,26 @@ describe('App, grensen på 500 gjøremål', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(stored()[0]?.title).toBe('Dekkskift til vinter')
-    expect(stored()).toHaveLength(500)
+    expect(stored()).toHaveLength(250)
   })
 
-  it('lar deg legge til igjen etter at et gjøremål er slettet', () => {
+  it('lar deg legge til gjøremål nummer 250 etter en sletting, og så er grensen nådd igjen', () => {
     render(<App />)
     const column = screen.getByRole('complementary', { name: 'Denne måneden' })
     fireEvent.click(within(column).getByRole('button', { name: 'Slett «Dekkskift»' }))
     fireEvent.click(screen.getByRole('button', { name: 'Ja, slett' }))
+    expect(stored()).toHaveLength(249)
+
     fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
     expect(within(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).queryByRole('alert')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: 'Nummer 250' } })
+    fireEvent.change(screen.getByLabelText('Dato 1'), { target: { value: '20.10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(stored()).toHaveLength(250)
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).getByRole('alert')).toHaveTextContent(LIMIT)
   })
 })
 

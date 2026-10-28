@@ -536,16 +536,16 @@ describe('TodoFormDialog, tegnteller', () => {
     expect(titleField()).toHaveAccessibleDescription('Tittelen kan ha maks 60 tegn.')
   })
 
-  it('sier fra med en gang når grensen på 500 gjøremål er nådd', () => {
+  it('sier fra med en gang når grensen på 250 gjøremål er nådd', () => {
     render(<TodoFormDialog isLimitReached onSave={vi.fn()} onClose={vi.fn()} />)
     expect(within(dialog()).getByRole('alert')).toHaveTextContent(
-      'Du kan ha maks 500 gjøremål. Slett et gjøremål før du legger til et nytt.',
+      'Du kan ha maks 250 gjøremål. Slett et gjøremål før du legger til et nytt.',
     )
   })
 
   it('har ikke noe varsel om grensen så lenge den ikke er nådd', () => {
     renderForm()
-    expect(within(dialog()).queryByText(/maks 500 gjøremål/)).toBeNull()
+    expect(within(dialog()).queryByText(/maks 250 gjøremål/)).toBeNull()
   })
 
   it('viser et varsel når lagringen i nettleseren feilet', () => {

@@ -19,9 +19,10 @@ export const CORRUPT_COPY_KEY = 'aarhjul:v1:corrupt-copy'
 export const MAX_TITLE_LENGTH = 60
 export const MAX_DESCRIPTION_LENGTH = 500
 export const MAX_DATES = 12
-// Far more than anyone needs, and still quick to draw: 500 todos with 12 dates each are placed in about 25 ms.
+// Far more than anyone needs, and still quick to draw: 250 todos with 12 dates each are placed in about 10 ms,
+// and about 0.45 s in the worst case, with all dates within a few days of each other (500 took 3.3 s).
 // Without a limit, a few thousand valid todos, from a bug or another page on the same origin, freeze the tab.
-export const MAX_TODOS = 500
+export const MAX_TODOS = 250
 // Ids made by the app are 36 characters (crypto.randomUUID)
 export const MAX_ID_LENGTH = 64
 
