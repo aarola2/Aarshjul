@@ -620,7 +620,7 @@ describe('App, lagring som feiler', () => {
     expect(within(form()).queryByRole('alert')).toBeNull()
   })
 
-  it('lagrer og lukker skjemaet når lagringen virker igjen', () => {
+  it('lagrer og lukker skjemaet når lagringen virker igjen, uten at meldingen henger igjen', () => {
     render(<App />)
     const spy = failWrites()
     addTodo('Rense takrennene', '03.10')
@@ -628,6 +628,23 @@ describe('App, lagring som feiler', () => {
     fireEvent.click(within(form()).getByRole('button', { name: 'Lagre' }))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(within(column()).getByRole('heading', { level: 3, name: 'Rense takrennene' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(form()).queryByRole('alert')).toBeNull()
+  })
+
+  it('sletter når lagringen virker igjen, uten at meldingen henger igjen', () => {
+    render(<App />)
+    const spy = failWrites()
+    fireEvent.click(within(column()).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Ja, slett' }))
+    spy.mockRestore()
+    fireEvent.click(within(confirm()).getByRole('button', { name: 'Ja, slett' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(within(column()).queryByRole('heading', { level: 3, name: 'Dekkskift' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(form()).queryByRole('alert')).toBeNull()
   })
 
   it('lar bekreftelsen stå med melding når slettingen ikke kan lagres, og gjøremålet blir', () => {

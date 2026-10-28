@@ -110,7 +110,7 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 |---|---|
 | Meldingen «Lagrede data var ødelagt» | Innholdet i `aarhjul:v1:todos` besto ikke valideringen i `storage.ts`. Last ned kopien fra meldingen, eller les `aarhjul:v1:corrupt-copy` i utviklerverktøyene (Application → Local Storage). |
 | Meldingen «Nettleseren tillater ikke lagring» | Nettleseren blokkerer lagring for nettstedet. Tillat nettstedsdata for adressen. |
-| «Kunne ikke lagre» eller «Kunne ikke slette» i en dialog | Lagringen er full eller blokkert. Ingenting er endret. Frigjør plass (for eksempel ved å slette nettstedsdata for andre sider på `aarola2.github.io`) eller tillat lagring, og prøv igjen. |
+| «Kunne ikke lagre» eller «Kunne ikke slette» i en dialog | Lagringen er full eller blokkert. Ingenting er endret. Lagringen deles med andre prosjekter på `aarola2.github.io`, så frigjør plass ved å slette data i de andre appene, eller tillat lagring, og prøv igjen. Ikke slett nettstedsdata for hele adressen, for da forsvinner også gjøremålene her. |
 | Endringer forsvinner når appen er åpen i to faner | Den siste fanen som lagrer, overskriver den andre (#47). Bruk én fane. |
 | Lokal e2e gir rare resultater | `reuseExistingServer` er på lokalt, så Playwright gjenbruker det som allerede kjører på port 5173. Sjekk med `lsof -nP -iTCP:5173 -sTCP:LISTEN`, og stopp den andre serveren. |
 | En e2e-test feiler bare på visse datoer | Testen bruker dagens dato uten å låse klokka. Bruk `page.clock.setFixedTime`. |
