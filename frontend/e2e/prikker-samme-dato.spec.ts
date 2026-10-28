@@ -19,7 +19,7 @@ const SAME_DATE = [
 ]
 
 const wheel = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' })
-const dots = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' }).getByRole('button')
+const dots = (page: Page) => wheel(page).getByRole('button')
 
 async function openWith(page: Page, todos: unknown[]) {
   await page.clock.setFixedTime(new Date('2026-10-26T12:00:00'))
