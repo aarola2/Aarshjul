@@ -50,6 +50,7 @@ Tatt uendret fra referansen:
 | Kan et gjøremål ikke lagres, blir skjemaet stående åpent med «Kunne ikke lagre. Lagringen i nettleseren er full eller blokkert.» over knappene | Brukeren skal ikke tro at noe er lagret. Besluttet av eier i #46. |
 | Kan en sletting ikke lagres, blir «Er du sikker?» stående med «Kunne ikke slette. Lagringen i nettleseren er full eller blokkert.» over knappene | Gjøremålet skal ikke forsvinne fra skjermen når det fortsatt er lagret. Besluttet av eier i #46. |
 | Slettes et gjøremål i en annen fane mens det er åpent i visning, skjema eller «Er du sikker?», lukkes dialogen, og en varselstripe viser «Gjøremålet «Tittel» ble slettet i en annen fane.» med «Lukk». Fokus går til «+ Legg til nytt gjøremål». | Gjøremålet skal ikke stille gjenoppstå fra et skjema som var åpent. Et skjema med sperret «Lagre» ble valgt bort. Besluttet av eier i #47. |
+| Med 250 gjøremål viser skjemaet for nytt gjøremål «Du kan ha maks 250 gjøremål. Slett et gjøremål før du legger til et nytt.» over knappene, og «Lagre» lagrer ingenting. «+ Legg til nytt gjøremål» forblir aktiv. Redigering virker som før. | Knappen er reservemål for fokus og kan ikke deaktiveres. Grensen hindrer at store mengder data fryser appen. Besluttet av eier i #56. |
 | Prototypemenyen nederst til venstre | Bare for å vise tilstander i prototypen. Bygges ikke. Den er lukket fra start og dekker deler av hjulet når den er åpen. |
 
 ## Skjermer og tilstander

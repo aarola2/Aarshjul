@@ -166,6 +166,31 @@ describe('loadTodos ved grenseverdiene', () => {
   })
 })
 
+describe('grenser for antall gjøremål og lengden på id', () => {
+  const many = (count: number) => Array.from({ length: count }, (_, i) => validTodo({ id: `id-${String(i)}` }))
+
+  it('godtar nøyaktig 250 gjøremål', () => {
+    storeRaw(JSON.stringify(many(250)))
+    expect(loadTodos()).toEqual({ status: 'ok', todos: many(250) })
+  })
+
+  it('251 gjøremål gir ødelagt', () => {
+    storeRaw(JSON.stringify(many(251)))
+    expectCorrupt()
+  })
+
+  it('godtar en id på nøyaktig 64 tegn', () => {
+    const todo = validTodo({ id: 'a'.repeat(64) })
+    storeRaw(JSON.stringify([todo]))
+    expect(loadTodos()).toEqual({ status: 'ok', todos: [todo] })
+  })
+
+  it('en id på 65 tegn gir ødelagt', () => {
+    storeRaw(JSON.stringify([validTodo({ id: 'a'.repeat(65) })]))
+    expectCorrupt()
+  })
+})
+
 describe('lagring som feiler', () => {
   afterEach(() => {
     vi.restoreAllMocks()

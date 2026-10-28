@@ -3,7 +3,7 @@ import './App.css'
 import ConfirmDeleteDialog from './ConfirmDeleteDialog.tsx'
 import CorruptDataAlert from './CorruptDataAlert.tsx'
 import MonthColumn from './MonthColumn.tsx'
-import { keepCorruptCopy, loadTodos, saveTodos, type Todo } from './storage.ts'
+import { keepCorruptCopy, loadTodos, MAX_TODOS, saveTodos, type Todo } from './storage.ts'
 import StorageBlockedAlert from './StorageBlockedAlert.tsx'
 import { createTodo, removeTodo, type TodoDraft, updateTodo } from './todoForm.ts'
 import TodoFormDialog from './TodoFormDialog.tsx'
@@ -31,6 +31,8 @@ export default function App() {
   const editing = form?.kind === 'edit' ? todos.find((todo) => todo.id === form.id) : undefined
   // The form for editing is only shown while the todo still exists, so it never turns into a new one
   const isFormShown = form?.kind === 'new' || editing !== undefined
+  // A new todo is refused at the limit; the form says so. Editing is always allowed.
+  const isLimitReached = editing === undefined && todos.length >= MAX_TODOS
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const deleting = todos.find((todo) => todo.id === deletingId)
   // The open dialog stays open with a message when what it did could not be stored
@@ -69,6 +71,7 @@ export default function App() {
   }
 
   const saveTodo = (draft: TodoDraft) => {
+    if (isLimitReached) return
     if (store(editing ? updateTodo(todos, editing.id, draft) : [...todos, createTodo(draft, todos, new Date())])) {
       setForm(null)
     }
@@ -177,7 +180,13 @@ export default function App() {
         />
       )}
       {isFormShown && (
-        <TodoFormDialog initial={editing} hasSaveFailed={hasStoreFailed} onSave={saveTodo} onClose={closeForm} />
+        <TodoFormDialog
+          initial={editing}
+          hasSaveFailed={hasStoreFailed}
+          isLimitReached={isLimitReached}
+          onSave={saveTodo}
+          onClose={closeForm}
+        />
       )}
     </>
   )

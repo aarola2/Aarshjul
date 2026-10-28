@@ -778,6 +778,78 @@ describe('App, endringer fra en annen fane', () => {
   })
 })
 
+describe('App, grensen på 250 gjøremål', () => {
+  const LIMIT = 'Du kan ha maks 250 gjøremål. Slett et gjøremål før du legger til et nytt.'
+  // One todo in October, so it has a card; the rest in January, so the column stays short
+  const FULL = Array.from({ length: 250 }, (_, i) => ({
+    id: `id-${String(i)}`,
+    title: i === 0 ? 'Dekkskift' : `Gjøremål ${String(i)}`,
+    description: '',
+    dates: [{ month: i === 0 ? 10 : 1, day: 1 + (i % 28) }],
+    createdAt: '2026-01-02T09:00:00.000Z',
+  }))
+
+  beforeEach(() => {
+    localStorage.clear()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(FULL))
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const stored = () => {
+    const result = loadTodos()
+    if (result.status !== 'ok') throw new Error('Lagringen kunne ikke leses')
+    return result.todos
+  }
+
+  it('sier fra i skjemaet og lagrer ikke et nytt gjøremål', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    const form = screen.getByRole('dialog', { name: 'Nytt gjøremål' })
+    expect(within(form).getByRole('alert')).toHaveTextContent(LIMIT)
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: 'Ett for mye' } })
+    fireEvent.change(screen.getByLabelText('Dato 1'), { target: { value: '15.10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    expect(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).toBeInTheDocument()
+    expect(stored()).toHaveLength(250)
+  })
+
+  it('lar deg fortsatt redigere et gjøremål', () => {
+    render(<App />)
+    const column = screen.getByRole('complementary', { name: 'Denne måneden' })
+    fireEvent.click(within(column).getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    expect(within(screen.getByRole('dialog', { name: 'Rediger gjøremål' })).queryByRole('alert')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: 'Dekkskift til vinter' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(stored()[0]?.title).toBe('Dekkskift til vinter')
+    expect(stored()).toHaveLength(250)
+  })
+
+  it('lar deg legge til gjøremål nummer 250 etter en sletting, og så er grensen nådd igjen', () => {
+    render(<App />)
+    const column = screen.getByRole('complementary', { name: 'Denne måneden' })
+    fireEvent.click(within(column).getByRole('button', { name: 'Slett «Dekkskift»' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, slett' }))
+    expect(stored()).toHaveLength(249)
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).queryByRole('alert')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Tittel'), { target: { value: 'Nummer 250' } })
+    fireEvent.change(screen.getByLabelText('Dato 1'), { target: { value: '20.10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(stored()).toHaveLength(250)
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).getByRole('alert')).toHaveTextContent(LIMIT)
+  })
+})
+
 describe('App, tomtilstand', () => {
   const EMPTY_TITLE = 'Ingen oppgaver denne måneden'
 
