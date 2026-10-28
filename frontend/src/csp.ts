@@ -11,6 +11,8 @@ export const CONTENT_SECURITY_POLICY = [
   "base-uri 'none'",
   "form-action 'none'",
   "object-src 'none'",
+  // Does not fall back to default-src but to script-src, which would allow workers from all of aarola2.github.io
+  "worker-src 'none'",
 ].join('; ')
 
 // GitHub Pages cannot send headers, so the policy is a meta tag, first in <head> so it covers every script

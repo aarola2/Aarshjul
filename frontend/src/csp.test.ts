@@ -20,7 +20,7 @@ async function builtIndexHtml(): Promise<string> {
 }
 
 describe('Content-Security-Policy', () => {
-  it('stenger alt som standard og tillater bare skript, stil, bilder og fonter fra egen adresse', () => {
+  it('stenger alt som standard, også workere, og tillater bare skript, stil, bilder og fonter fra egen adresse', () => {
     expect(Object.fromEntries(directives())).toEqual({
       'default-src': "'none'",
       'script-src': "'self'",
@@ -30,6 +30,7 @@ describe('Content-Security-Policy', () => {
       'base-uri': "'none'",
       'form-action': "'none'",
       'object-src': "'none'",
+      'worker-src': "'none'",
     })
   })
 
