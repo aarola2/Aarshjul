@@ -63,6 +63,8 @@ test('den bygde appen har CSP-en, og hovedflyten gir ingen brudd på den', async
   await card(page, `${TITLE} og nedløp`).getByRole('button', { name: `Slett «${TITLE} og nedløp»` }).click()
   await page.getByRole('dialog', { name: 'Er du sikker?' }).getByRole('button', { name: 'Ja, slett' }).click()
   await expect(column(page).getByText('Ingen oppgaver denne måneden')).toBeVisible()
+  // Checked before the reload below, which starts a new list
+  expect(await violations(page)).toEqual([])
 
   // The copy of corrupt data is downloaded through a blob: address
   await page.evaluate((key) => {
