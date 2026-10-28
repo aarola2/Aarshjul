@@ -47,6 +47,15 @@ describe('ConfirmDeleteDialog', () => {
     expect(onConfirm).not.toHaveBeenCalled()
   })
 
+  it('lukker med en gang ved Esc, i stedet for å vente på nettleseren', () => {
+    const { onConfirm, onClose } = renderConfirm()
+    const cancel = new Event('cancel', { cancelable: true })
+    fireEvent(dialog(), cancel)
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(cancel.defaultPrevented).toBe(true)
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
   it('melder fra når nettleseren lukker dialogen, for eksempel med Esc', () => {
     const { onConfirm, onClose } = renderConfirm()
     fireEvent(dialog(), new Event('close'))

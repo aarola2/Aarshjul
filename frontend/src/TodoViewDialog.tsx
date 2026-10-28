@@ -1,6 +1,6 @@
 import DateBadge from './DateBadge.tsx'
 import type { Todo, TodoDate } from './storage.ts'
-import { useModalDialog } from './useModalDialog.ts'
+import { closeOnEscape, useModalDialog } from './useModalDialog.ts'
 import { isLeapYear } from './wheelGeometry.ts'
 
 interface TodoViewDialogProps {
@@ -23,6 +23,7 @@ export default function TodoViewDialog({ todo, today, onClose, onEdit, onDelete 
       ref={dialogRef}
       aria-label={todo.title}
       onClose={onClose}
+      onCancel={closeOnEscape(onClose)}
       onClick={(event) => {
         // The content fills the dialog, so a click on the dialog element itself is a click on the backdrop
         if (event.target === event.currentTarget) onClose()

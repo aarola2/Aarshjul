@@ -65,6 +65,8 @@ export default function App() {
         <button
           type="button"
           className="btn primary"
+          // Gets focus when the element that opened a dialog is gone
+          data-focus-fallback
           onClick={() => {
             setForm({ kind: 'new' })
           }}
