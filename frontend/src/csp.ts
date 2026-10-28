@@ -5,7 +5,7 @@ import type { Plugin } from 'vite'
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'none'",
   "script-src 'self'",
-  "style-src 'none'",
+  "style-src 'self'",
   "img-src 'self'",
   "font-src 'self'",
   "base-uri 'none'",
