@@ -17,7 +17,7 @@ type FormState = { kind: 'new' } | { kind: 'edit'; id: string } | null
 
 export default function App() {
   const today = useToday()
-  // Read once at start. Corrupt data gives an empty list, a copy kept aside and a warning;
+  // Read at start, and again when another tab changes the todos (below). Corrupt data gives an empty list, a copy kept aside and a warning;
   // blocked storage gives an empty list and a warning.
   const [loaded] = useState(loadTodos)
   const [todos, setTodos] = useState<Todo[]>(loaded.status === 'ok' ? loaded.todos : [])

@@ -13,14 +13,14 @@ flowchart LR
   T -->|utkast| A[App]
   A -->|saveTodos| S[storage.ts]
   S <-->|JSON| L[(localStorage<br/>aarhjul:v1:todos)]
-  S -->|loadTodos + validering<br/>ved oppstart| A
+  S -->|loadTodos + validering<br/>ved oppstart og når<br/>en annen fane lagrer| A
   A --> W[Wheel]
   A --> M[MonthColumn]
   A --> V[TodoViewDialog /<br/>ConfirmDeleteDialog]
 ```
 
 Hovedflyten:
-1. `App` leser lagringen ved oppstart (`loadTodos`), og på nytt hver gang en annen fane endrer gjøremålene (`storage`-hendelsen, se `useOtherTabChanges`). Er dataene gyldige, blir de tilstanden. Er de ødelagte, starter appen med en tom liste og viser en melding. Den prøver å ta vare på en kopi i lagringen. Går ikke det, for eksempel fordi lagringen er full, kan kopien bare lastes ned fra meldingen. Blokkerer nettleseren lagring, starter appen med en tom liste og viser en melding om det.
+1. `App` leser lagringen ved oppstart (`loadTodos`), og på nytt hver gang en annen fane endrer gjøremålene (`storage`-hendelsen, se `useOtherTabChanges`). Er dataene gyldige, blir de tilstanden. Er de ødelagte, blir listen tom og appen viser en melding. Den prøver å ta vare på en kopi i lagringen. Går ikke det, for eksempel fordi lagringen er full, kan kopien bare lastes ned fra meldingen. Blokkerer nettleseren lagring, starter appen med en tom liste og viser en melding om det.
 2. Brukeren fyller ut skjemaet. `todoForm.ts` validerer tittel, beskrivelse og datoer og gir enten et utkast eller feilmeldinger per felt.
 3. `App` lagrer først og oppdaterer tilstanden etterpå. Hjulet og sidekolonnen viser derfor aldri noe som ikke er lagret. Feiler lagringen (full eller blokkert), endres ingenting, og dialogen blir stående med en melding.
 4. Hjulet og sidekolonnen tegnes ut fra tilstanden og dagens dato (`useToday`).

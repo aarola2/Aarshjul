@@ -740,6 +740,21 @@ describe('App, endringer fra en annen fane', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe('[]')
   })
 
+  it('tar ikke med en gammel lagringsfeil til neste skjema når gjøremålet slettes i en annen fane', () => {
+    render(<App />)
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Full', 'QuotaExceededError')
+    })
+    fireEvent.click(within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }))
+    expect(within(screen.getByRole('dialog')).getByRole('alert')).toBeInTheDocument()
+    spy.mockRestore()
+
+    otherTabStores('[]')
+    fireEvent.click(screen.getByRole('button', { name: '+ Legg til nytt gjøremål' }))
+    expect(within(screen.getByRole('dialog', { name: 'Nytt gjøremål' })).queryByRole('alert')).toBeNull()
+  })
+
   it('sier ikke fra når et gjøremål som ikke er åpent, slettes i en annen fane', () => {
     render(<App />)
     otherTabStores('[]')
