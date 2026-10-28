@@ -3,7 +3,7 @@ import './App.css'
 import ConfirmDeleteDialog from './ConfirmDeleteDialog.tsx'
 import CorruptDataAlert from './CorruptDataAlert.tsx'
 import MonthColumn from './MonthColumn.tsx'
-import { keepCorruptCopy, loadTodos, MAX_TODOS, saveTodos, type Todo } from './storage.ts'
+import { keepCorruptCopy, loadTodos, MAX_TODOS, olderCorruptCopy, saveTodos, type Todo } from './storage.ts'
 import StorageBlockedAlert from './StorageBlockedAlert.tsx'
 import { createTodo, removeTodo, type TodoDraft, updateTodo } from './todoForm.ts'
 import TodoFormDialog from './TodoFormDialog.tsx'
@@ -25,6 +25,8 @@ export default function App() {
   const [isBlockedShown, setBlockedShown] = useState(loaded.status === 'blocked')
   // Kept before anything can be saved over the corrupt data. Writing the same text twice in StrictMode does no harm.
   const [isCopyKept, setCopyKept] = useState(() => loaded.status !== 'corrupt' || keepCorruptCopy(loaded.raw))
+  // Looked up after the copy above is kept, so it is an earlier copy that is still there
+  const [olderRaw, setOlderRaw] = useState(() => (loaded.status === 'corrupt' ? olderCorruptCopy(loaded.raw) : null))
   const [form, setForm] = useState<FormState>(null)
   const [viewingId, setViewingId] = useState<string | null>(null)
   const viewing = todos.find((todo) => todo.id === viewingId)
@@ -57,6 +59,7 @@ export default function App() {
     if (next.status === 'corrupt') {
       setCorruptRaw(next.raw)
       setCopyKept(keepCorruptCopy(next.raw))
+      setOlderRaw(olderCorruptCopy(next.raw))
     }
     if (openTodo && !nextTodos.some((todo) => todo.id === openTodo.id)) closeDialogsFor(openTodo.title)
     setTodos(nextTodos)
@@ -139,6 +142,7 @@ export default function App() {
         <CorruptDataAlert
           raw={corruptRaw}
           isCopyKept={isCopyKept}
+          olderRaw={olderRaw}
           onClose={() => {
             setCorruptRaw(null)
           }}

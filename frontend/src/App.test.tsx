@@ -850,6 +850,47 @@ describe('App, grensen på 250 gjøremål', () => {
   })
 })
 
+describe('App, eldre kopi av ødelagte data', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const otherTabStores = (raw: string) => {
+    localStorage.setItem(STORAGE_KEY, raw)
+    fireEvent(window, new StorageEvent('storage', { key: STORAGE_KEY }))
+  }
+
+  it('tilbyr ingen eldre kopi første gang dataene er ødelagte', () => {
+    localStorage.setItem(STORAGE_KEY, '[A')
+    render(<App />)
+    expect(screen.getByRole('alert')).not.toHaveTextContent('eldre kopi')
+  })
+
+  it('tilbyr den eldre kopien når nye ødelagte data kommer ved oppstart', () => {
+    localStorage.setItem(CORRUPT_COPY_KEY, '[A')
+    localStorage.setItem(STORAGE_KEY, '[B')
+    render(<App />)
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('En eldre kopi er også tatt vare på.')
+    expect(within(alert).getByRole('button', { name: 'Last ned eldre kopi' })).toBeInTheDocument()
+    expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBe('[B')
+  })
+
+  it('tilbyr den eldre kopien når nye ødelagte data kommer fra en annen fane', () => {
+    localStorage.setItem(STORAGE_KEY, '[A')
+    render(<App />)
+    otherTabStores('[B')
+    expect(screen.getByRole('alert')).toHaveTextContent('En eldre kopi er også tatt vare på.')
+    expect(localStorage.getItem(CORRUPT_COPY_KEY)).toBe('[B')
+  })
+})
+
 describe('App, tomtilstand', () => {
   const EMPTY_TITLE = 'Ingen oppgaver denne måneden'
 

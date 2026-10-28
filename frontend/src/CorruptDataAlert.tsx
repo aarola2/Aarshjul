@@ -3,10 +3,13 @@ interface CorruptDataAlertProps {
   raw: string
   // false when the copy could not be kept in the browser, so it can only be downloaded
   isCopyKept: boolean
+  // An earlier copy that is still kept, and differs from raw; it is only ever downloaded, never shown
+  olderRaw?: string | null
   onClose: () => void
 }
 
 const FILE_NAME = 'aarshjul-odelagte-data.json'
+const OLDER_FILE_NAME = 'aarshjul-odelagte-data-eldre.json'
 
 function download(text: string, fileName: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
@@ -22,7 +25,7 @@ function download(text: string, fileName: string) {
   }, 1000)
 }
 
-export default function CorruptDataAlert({ raw, isCopyKept, onClose }: CorruptDataAlertProps) {
+export default function CorruptDataAlert({ raw, isCopyKept, olderRaw = null, onClose }: CorruptDataAlertProps) {
   return (
     <div className="alert" role="alert">
       <p>
@@ -30,6 +33,7 @@ export default function CorruptDataAlert({ raw, isCopyKept, onClose }: CorruptDa
         {isCopyKept
           ? 'En kopi av de ødelagte dataene er tatt vare på.'
           : 'Kopien kunne ikke lagres i nettleseren. Last ned kopien før du lagrer noe nytt.'}
+        {olderRaw !== null && ' En eldre kopi er også tatt vare på.'}
       </p>
       <div className="alert-actions">
         <button
@@ -41,6 +45,17 @@ export default function CorruptDataAlert({ raw, isCopyKept, onClose }: CorruptDa
         >
           Last ned kopien
         </button>
+        {olderRaw !== null && (
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => {
+              download(olderRaw, OLDER_FILE_NAME)
+            }}
+          >
+            Last ned eldre kopi
+          </button>
+        )}
         <button type="button" className="btn link" onClick={onClose}>
           Lukk
         </button>

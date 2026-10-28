@@ -15,7 +15,9 @@ export interface Todo {
 export type LoadResult = { status: 'ok'; todos: Todo[] } | { status: 'corrupt'; raw: string } | { status: 'blocked' }
 
 export const STORAGE_KEY = 'aarhjul:v1:todos'
+// The newest copy of corrupt data, and the first one, which the app never overwrites
 export const CORRUPT_COPY_KEY = 'aarhjul:v1:corrupt-copy'
+export const FIRST_CORRUPT_COPY_KEY = 'aarhjul:v1:corrupt-copy-first'
 export const MAX_TITLE_LENGTH = 60
 export const MAX_DESCRIPTION_LENGTH = 500
 export const MAX_DATES = 12
@@ -49,14 +51,30 @@ export function loadTodos(): LoadResult {
   return isTodoList(parsed) ? { status: 'ok', todos: parsed } : { status: 'corrupt', raw }
 }
 
-// Kept under its own key, which saveTodos never writes to. Returns false when storage refuses it,
-// for example when it is full, so the app can go on without it.
+// Kept under its own key, which saveTodos never writes to. A different earlier copy is first moved aside, once,
+// so a later corrupt value cannot overwrite it. Returns false when storage refuses it, for example when it is
+// full, so the app can go on without it; the earlier copy is then left as it was.
 export function keepCorruptCopy(raw: string): boolean {
   try {
+    const current = localStorage.getItem(CORRUPT_COPY_KEY)
+    if (current !== null && current !== raw && localStorage.getItem(FIRST_CORRUPT_COPY_KEY) === null) {
+      localStorage.setItem(FIRST_CORRUPT_COPY_KEY, current)
+    }
     localStorage.setItem(CORRUPT_COPY_KEY, raw)
     return true
   } catch {
     return false
+  }
+}
+
+// The oldest kept copy that differs from the corrupt data shown now, for the user to download; null if none.
+// It is only ever offered as a file, never read as todos or shown.
+export function olderCorruptCopy(raw: string): string | null {
+  try {
+    const copies = [localStorage.getItem(FIRST_CORRUPT_COPY_KEY), localStorage.getItem(CORRUPT_COPY_KEY)]
+    return copies.find((copy) => copy !== null && copy !== raw) ?? null
+  } catch {
+    return null
   }
 }
 
