@@ -77,7 +77,7 @@ Produksjon er stengt (fail closed) på to måter:
 - **I repoet:** Jobben kjører bare når repo-variabelen `PRODUKSJON_GODKJENNING_VERIFISERT` er `true` (`deploy.yml`).
 - **I GitHub-innstillingene** (utenfor repoet, kontrolleres av eieren): Miljøet `production` skal kreve godkjenning fra eieren (required reviewers). «Allow administrators to bypass» skal være av, og bare `main` skal være tillatt.
 
-Innstillingene kan ikke leses fra repoet, så de må bevises og ikke antas. Beviset er en kjøring der `produksjon` står som «Waiting for review». Det ble bekreftet av eieren 28.10.2026, før v1.0.0.
+Innstillingene kan ikke leses fra repoet, så de må bevises og ikke antas. Beviset er en kjøring der `produksjon` står som «Waiting for review». Eieren har skriftlig bekreftet at kjøringen [40657306053](https://github.com/aarola2/Aarshjul/actions/runs/40657306053) sto som «Waiting for review» 28.10.2026, før den ble godkjent og v1.0.0 ble publisert. Innstillingene er ikke lest direkte.
 
 > Viktig rekkefølge: GitHub lager et miljø automatisk første gang en jobb bruker det. Lag derfor `production` med beskyttelse *før* variabelen settes. Ellers kan første kjøring publisere uten godkjenning.
 
@@ -124,13 +124,13 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 - **Brukeren**, som bruker appen i egen nettleser på PC.
 - **Andre sider på `aarola2.github.io`.** De deler opprinnelse med appen, og dermed `localStorage`.
 - **Avhengigheter og forsyningskjeden**: npm-pakker (React i produksjon, verktøy i utvikling) og GitHub Actions.
-- **De som kan pushe til repoet.** Endringer skal gå via PR til `main`. Rulesettet og de påkrevde sjekkene håndheves i GitHub-innstillingene, som eieren kontrollerer. De står ikke i repoet. Produksjon krever godkjenning fra eieren.
+- **De som kan pushe til repoet.** Endringer skal gå via PR til `main`. Rulesettet og de påkrevde sjekkene håndheves i GitHub-innstillingene, som eieren kontrollerer. De står ikke i repoet. Produksjon skal kreve godkjenning fra eieren (se «Kjøre»).
 
 **Tillitsgrenser og angrepsflater**
 
 | Grense | Tiltak |
 |---|---|
-| `localStorage` → appen | Alt som leses er ubetrodd. `storage.ts` sjekker nøyaktige nøkler, typer, lengder, gyldige datoer, unike id-er og datoer, og ISO-tidsstempel. Ugyldige data brukes ikke. Appen starter tomt, viser en melding og prøver å ta vare på en kopi (kopien kan alltid lastes ned). |
+| `localStorage` → appen | Alt som leses er ubetrodd. `storage.ts` sjekker nøyaktige nøkler, typer, lengder, gyldige datoer, unike id-er og datoer, og ISO-tidsstempel. Ugyldige data brukes ikke. Appen starter tomt, viser en melding og prøver å ta vare på en kopi. Kopien kan også lastes ned fra meldingen så lenge den vises. |
 | Skjemaet → appen | `todoForm.ts` validerer lengde og dato før noe lagres. Tekst vises bare gjennom React, som escaper den. Appen bruker ikke `dangerouslySetInnerHTML`, `innerHTML` eller `eval`. |
 | Nedlasting av ødelagte data | Kopien lastes ned som Blob med fast filnavn (`aarshjul-odelagte-data.json`) og typen `application/json`. Innholdet vises aldri på siden. |
 | Bygg og CI | Actions er festet til full SHA. Arbeidsflytene har `permissions: contents: read` som standard. Det finnes ingen `pull_request_target`. `persist-credentials: false`. gitleaks, CodeQL, `npm audit` og Dependabot. |
