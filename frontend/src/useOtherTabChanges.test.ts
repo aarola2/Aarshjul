@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { CORRUPT_COPY_KEY, STORAGE_KEY } from './storage.ts'
 import { useOtherTabChanges } from './useOtherTabChanges.ts'
 
-const changeIn = (key: string | null) => {
-  window.dispatchEvent(new StorageEvent('storage', { key }))
+const changeIn = (key: string | null, storageArea: Storage | null = localStorage) => {
+  window.dispatchEvent(new StorageEvent('storage', { key, storageArea }))
 }
 
 describe('useOtherTabChanges', () => {
@@ -36,6 +36,33 @@ describe('useOtherTabChanges', () => {
       useOtherTabChanges(onChange)
     })
     changeIn(key)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['gjøremålenes nøkkel i sessionStorage', STORAGE_KEY, sessionStorage],
+    ['sessionStorage som tømmes', null, sessionStorage],
+    ['en hendelse uten lagringsområde', STORAGE_KEY, null],
+  ])('ignorerer %s', (_name, key, storageArea) => {
+    const onChange = vi.fn()
+    renderHook(() => {
+      useOtherTabChanges(onChange)
+    })
+    changeIn(key, storageArea)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('ignorerer hendelsen når nettleseren sperrer lagringen', () => {
+    const onChange = vi.fn()
+    renderHook(() => {
+      useOtherTabChanges(onChange)
+    })
+    const area = localStorage
+    vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+      throw new DOMException('Lagring er sperret', 'SecurityError')
+    })
+    changeIn(STORAGE_KEY, area)
+    vi.restoreAllMocks()
     expect(onChange).not.toHaveBeenCalled()
   })
 

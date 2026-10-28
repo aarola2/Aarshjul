@@ -696,7 +696,7 @@ describe('App, endringer fra en annen fane', () => {
   // What another tab does: it writes to storage, and this tab gets a storage event
   const otherTabStores = (raw: string) => {
     localStorage.setItem(STORAGE_KEY, raw)
-    fireEvent(window, new StorageEvent('storage', { key: STORAGE_KEY }))
+    fireEvent(window, new StorageEvent('storage', { key: STORAGE_KEY, storageArea: localStorage }))
   }
 
   it('viser gjøremål som en annen fane har lagret', () => {
@@ -767,6 +767,42 @@ describe('App, endringer fra en annen fane', () => {
     otherTabStores('[]')
     fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Lukk' }))
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it.each([
+    ['visningen', () => within(column()).getByRole('button', { name: 'Dekkskift' })],
+    ['redigeringsskjemaet', () => within(column()).getByRole('button', { name: 'Rediger «Dekkskift»' })],
+    ['bekreftelsen', () => within(column()).getByRole('button', { name: 'Slett «Dekkskift»' })],
+  ])('lukker %s med bare varselet om ødelagte data når en annen fane lagrer ugyldige data', (_name, opener) => {
+    render(<App />)
+    fireEvent.click(opener())
+    otherTabStores('[{"id":')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('alert')).toHaveTextContent('Lagrede data var ødelagt.')
+    expect(screen.queryByText(GONE)).toBeNull()
+  })
+
+  it('viser varselet om sperret lagring når lagringen ikke kan leses ved en endring', () => {
+    render(<App />)
+    fireEvent.click(within(column()).getByRole('button', { name: 'Dekkskift' }))
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Lagring er sperret', 'SecurityError')
+    })
+    fireEvent(window, new StorageEvent('storage', { key: STORAGE_KEY, storageArea: localStorage }))
+    vi.restoreAllMocks()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('alert')).toHaveTextContent('Nettleseren tillater ikke lagring.')
+    expect(screen.queryByText(GONE)).toBeNull()
+  })
+
+  it('lar varselet om ødelagte data stå når en annen fane senere lagrer gyldige data', () => {
+    render(<App />)
+    otherTabStores('[{"id":')
+    otherTabStores(JSON.stringify([DEKKSKIFT]))
+    expect(cardTitle('Dekkskift')).toBeInTheDocument()
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Lagrede data var ødelagt.')
+    expect(within(alert).getByRole('button', { name: 'Last ned kopien' })).toBeInTheDocument()
   })
 
   it('viser den nye tittelen i visningen når gjøremålet endres i en annen fane', () => {
@@ -863,7 +899,7 @@ describe('App, eldre kopi av ødelagte data', () => {
 
   const otherTabStores = (raw: string) => {
     localStorage.setItem(STORAGE_KEY, raw)
-    fireEvent(window, new StorageEvent('storage', { key: STORAGE_KEY }))
+    fireEvent(window, new StorageEvent('storage', { key: STORAGE_KEY, storageArea: localStorage }))
   }
 
   it('tilbyr ingen eldre kopi første gang dataene er ødelagte', () => {

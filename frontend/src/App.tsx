@@ -43,16 +43,16 @@ export default function App() {
   const [goneTitle, setGoneTitle] = useState<string | null>(null)
   const openTodo = viewing ?? editing ?? deleting
 
-  // Closed with a message, so the todo can never be saved back by a form that was still open
-  const closeDialogsFor = (title: string) => {
+  // Closed, so the todo can never be saved back by a form that was still open
+  const closeDialogs = () => {
     setViewingId(null)
     setForm(null)
     setDeletingId(null)
     setStoreFailed(false)
-    setGoneTitle(title)
   }
 
-  // Read and checked again just as at start, so corrupt data gets the same warning and is never used
+  // Read and checked again just as at start, so corrupt data and blocked storage get the same warnings.
+  // Only a valid list without the open todo means it was deleted; otherwise the warning says what happened.
   useOtherTabChanges(() => {
     const next = loadTodos()
     const nextTodos = next.status === 'ok' ? next.todos : []
@@ -61,7 +61,11 @@ export default function App() {
       setCopyKept(keepCorruptCopy(next.raw))
       setOlderRaw(olderCorruptCopy(next.raw))
     }
-    if (openTodo && !nextTodos.some((todo) => todo.id === openTodo.id)) closeDialogsFor(openTodo.title)
+    if (next.status === 'blocked') setBlockedShown(true)
+    if (openTodo && !nextTodos.some((todo) => todo.id === openTodo.id)) {
+      closeDialogs()
+      if (next.status === 'ok') setGoneTitle(openTodo.title)
+    }
     setTodos(nextTodos)
   })
 
