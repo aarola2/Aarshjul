@@ -81,4 +81,31 @@ describe('CorruptDataAlert', () => {
     expect(alert).not.toHaveTextContent('tatt vare på')
     expect(within(alert).getByRole('button', { name: 'Last ned kopien' })).toBeInTheDocument()
   })
+
+  it('nevner ingen eldre kopi og har ingen knapp for den når det ikke finnes noen', () => {
+    const { alert } = renderAlert()
+    expect(alert).not.toHaveTextContent('eldre kopi')
+    expect(within(alert).queryByRole('button', { name: 'Last ned eldre kopi' })).toBeNull()
+  })
+
+  it('sier at en eldre kopi også er tatt vare på, og «Last ned eldre kopi» laster den ned', async () => {
+    const clicked: HTMLAnchorElement[] = []
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clicked.push(this)
+    })
+    render(<CorruptDataAlert raw={RAW} isCopyKept olderRaw="[eldre]" onClose={vi.fn()} />)
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('En kopi av de ødelagte dataene er tatt vare på. En eldre kopi er også tatt vare på.')
+
+    fireEvent.click(within(alert).getByRole('button', { name: 'Last ned eldre kopi' }))
+    expect(clicked[0]?.download).toBe('aarshjul-odelagte-data-eldre.json')
+    expect(await blobs[0]?.text()).toBe('[eldre]')
+  })
+
+  it('nevner den eldre kopien også når den nye ikke kunne lagres', () => {
+    render(<CorruptDataAlert raw={RAW} isCopyKept={false} olderRaw="[eldre]" onClose={vi.fn()} />)
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Kopien kunne ikke lagres i nettleseren. Last ned kopien før du lagrer noe nytt. En eldre kopi er også tatt vare på.',
+    )
+  })
 })

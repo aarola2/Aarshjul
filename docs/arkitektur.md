@@ -56,7 +56,8 @@ All kode ligger i `frontend/src`. Testene ligger ved siden av koden (`*.test.ts(
 
 **Nøkler i `localStorage`.** Nøklene har prefikset `aarhjul:v1:`, fordi alle Pages-sider under `aarola2.github.io` deler opprinnelse:
 - `aarhjul:v1:todos`: listen med gjøremål.
-- `aarhjul:v1:corrupt-copy`: kopi av ødelagte data. Den skrives bare når dataene var ødelagte, og `saveTodos` skriver aldri dit.
+- `aarhjul:v1:corrupt-copy`: den nyeste kopien av ødelagte data. Den skrives bare når dataene var ødelagte, og `saveTodos` skriver aldri dit.
+- `aarhjul:v1:corrupt-copy-first`: den første kopien. Når nye, annerledes ødelagte data ellers ville overskrevet en kopi, flyttes den eksisterende kopien hit, én gang. Appen overskriver den aldri. Er nye ødelagte data lik den første kopien, blir den nyeste stående. Dermed finnes det maks to kopier.
 
 ## Kjøre
 
@@ -111,7 +112,8 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 
 | Symptom | Årsak og hva du gjør |
 |---|---|
-| Meldingen «Lagrede data var ødelagt» | Innholdet i `aarhjul:v1:todos` besto ikke valideringen i `storage.ts`. Last ned kopien fra meldingen, eller les `aarhjul:v1:corrupt-copy` i utviklerverktøyene (Application → Local Storage). |
+| Meldingen «Lagrede data var ødelagt» | Innholdet i `aarhjul:v1:todos` besto ikke valideringen i `storage.ts`. Last ned kopien fra meldingen («Last ned eldre kopi» hvis en tidligere kopi også er tatt vare på), eller les `aarhjul:v1:corrupt-copy` og `aarhjul:v1:corrupt-copy-first` i utviklerverktøyene (Application → Local Storage). |
+| Kopiene av ødelagte data tar plass i lagringen | Appen sletter aldri kopiene selv. Når de er lastet ned og ikke trengs lenger, kan `aarhjul:v1:corrupt-copy` og `aarhjul:v1:corrupt-copy-first` slettes i utviklerverktøyene (Application → Local Storage). Ikke slett nettstedsdata for hele adressen, for da forsvinner også gjøremålene. |
 | Meldingen «Nettleseren tillater ikke lagring» | Nettleseren blokkerer lagring for nettstedet. Tillat nettstedsdata for adressen. |
 | «Kunne ikke lagre» eller «Kunne ikke slette» i en dialog | Lagringen er full eller blokkert. Ingenting er endret. Lagringen deles med andre prosjekter på `aarola2.github.io`, så frigjør plass ved å slette data i de andre appene, eller tillat lagring, og prøv igjen. Ikke slett nettstedsdata for hele adressen, for da forsvinner også gjøremålene her. |
 | En dialog lukkes av seg selv med «… ble slettet i en annen fane» | Gjøremålet ble slettet i en annen fane mens dialogen var åpen. Det kan ikke lagres tilbake. |
