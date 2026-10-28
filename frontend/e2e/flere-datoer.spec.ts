@@ -7,8 +7,7 @@ const dateField = (page: Page, n: number) => form(page).getByLabel(`Dato ${Strin
 const dateFields = (page: Page) => form(page).getByLabel(/^Dato \d+$/)
 const addDate = (page: Page) => form(page).getByRole('button', { name: '+ Legg til ekstra dato' })
 const column = (page: Page) => page.getByRole('complementary', { name: 'Denne måneden' })
-// Role and accessible name for the dots come with keyboard support in #21
-const dots = (page: Page) => page.getByTestId('prikk')
+const dots = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' }).getByRole('button')
 const stored = async (page: Page) =>
   JSON.parse((await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)) ?? '[]') as {
     title: string

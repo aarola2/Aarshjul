@@ -4,8 +4,7 @@ const STORAGE_KEY = 'aarhjul:v1:todos'
 const EMPTY_TITLE = 'Ingen oppgaver denne måneden'
 
 const column = (page: Page) => page.getByRole('complementary', { name: 'Denne måneden' })
-// Role and accessible name for the dots come with keyboard support in #21
-const dots = (page: Page) => page.getByTestId('prikk')
+const dots = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' }).getByRole('button')
 
 async function open(page: Page, now: string, todos: unknown[] = []) {
   await page.clock.setFixedTime(new Date(now))

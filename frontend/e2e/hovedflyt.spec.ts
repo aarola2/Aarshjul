@@ -9,7 +9,9 @@ const column = (page: Page) => page.getByRole('complementary', { name: 'Denne mÃ
 const card = (page: Page) =>
   column(page).getByRole('article').filter({ has: page.getByRole('heading', { name: TITLE, exact: true }) })
 const dot = (page: Page, name: string) => page.getByRole('button', { name, exact: true })
-const dots = (page: Page) => page.getByRole('button', { name: new RegExp(`^${TITLE}, `) })
+// The title is matched as plain text, so characters like ( and . in it have no special meaning
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const dots = (page: Page) => page.getByRole('button', { name: new RegExp(`^${escapeRegExp(TITLE)}, `) })
 const stored = (page: Page) => page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)
 
 async function screenshot(page: Page, name: string) {
