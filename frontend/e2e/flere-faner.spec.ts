@@ -15,7 +15,10 @@ const DEKKSKIFT = todo('a1', 'Dekkskift', 10, 15)
 const column = (page: Page) => page.getByRole('complementary', { name: 'Denne måneden' })
 const card = (page: Page, title: string) =>
   column(page).getByRole('article').filter({ has: page.getByRole('heading', { name: title, exact: true }) })
-const dotsOf = (page: Page, title: string) => page.getByRole('button', { name: new RegExp(`^${title}, `) })
+// The title is matched as plain text, so characters like ( and . in it have no special meaning
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const dotsOf = (page: Page, title: string) =>
+  page.getByRole('button', { name: new RegExp(`^${escapeRegExp(title)}, `) })
 const form = (page: Page, name: string) => page.getByRole('dialog', { name })
 const confirm = (page: Page) => page.getByRole('dialog', { name: 'Er du sikker?' })
 const read = (page: Page, key: string) => page.evaluate((k) => localStorage.getItem(k), key)

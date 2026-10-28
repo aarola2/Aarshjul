@@ -9,8 +9,7 @@ const MESSAGE =
 
 const alert = (page: Page) => page.getByRole('alert')
 const column = (page: Page) => page.getByRole('complementary', { name: 'Denne måneden' })
-// Role and accessible name for the dots come with keyboard support in #21
-const dots = (page: Page) => page.getByTestId('prikk')
+const dots = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' }).getByRole('button')
 const read = (page: Page, key: string) => page.evaluate((k) => localStorage.getItem(k), key)
 
 // Written only before the first load, so a reload shows what the app did with it

@@ -17,8 +17,7 @@ const TODOS = [
 ]
 
 const wheel = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' })
-// Role and accessible name for the dots come with keyboard support in #21
-const dots = (page: Page) => page.getByTestId('prikk')
+const dots = (page: Page) => wheel(page).getByRole('button')
 
 async function openWith(page: Page, todos: unknown[]) {
   await page.clock.setFixedTime(new Date('2026-10-26T12:00:00'))

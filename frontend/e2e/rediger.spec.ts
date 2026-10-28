@@ -28,8 +28,7 @@ const card = (page: Page, title: string) =>
   column(page).getByRole('article').filter({ has: page.getByRole('heading', { name: title, exact: true }) })
 const editForm = (page: Page) => page.getByRole('dialog', { name: 'Rediger gjøremål' })
 const dateField = (page: Page, n: number) => editForm(page).getByLabel(`Dato ${String(n)}`, { exact: true })
-// Role and accessible name for the dots come with keyboard support in #21
-const dots = (page: Page) => page.getByTestId('prikk')
+const dots = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' }).getByRole('button')
 const stored = (page: Page) => page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)
 
 // Stored only on the first load, so a reload shows what the app saved

@@ -15,8 +15,7 @@ const EXISTING = [
 const addButton = (page: Page) => page.getByRole('button', { name: '+ Legg til nytt gjøremål' })
 const form = (page: Page) => page.getByRole('dialog', { name: 'Nytt gjøremål' })
 const column = (page: Page) => page.getByRole('complementary', { name: 'Denne måneden' })
-// Role and accessible name for the dots come with keyboard support in #21
-const dots = (page: Page) => page.getByTestId('prikk')
+const dots = (page: Page) => page.getByRole('group', { name: 'Årshjul med gjøremål' }).getByRole('button')
 const stored = (page: Page) => page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)
 
 // Starts with one stored todo, so we can see that nothing is lost or added
