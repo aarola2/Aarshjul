@@ -115,9 +115,10 @@ jobs:
         env:
           E2E_PREVIEW: '1'
           PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-resultat.json
-      # Uten E2E_PREVIEW hoppes csp.spec.ts stille over, og jobben ville blitt grønn uten å sjekke CSP-en
+      # Uten E2E_PREVIEW hoppes csp.spec.ts stille over, og jobben ville blitt grønn uten å sjekke CSP-en.
+      # Feiler også hvis tallene mangler i rapporten, eller ingen tester kjørte.
       - name: Ingen tester hoppet over
-        run: node -e "const { skipped } = require('./e2e-resultat.json').stats; if (skipped > 0) { console.error(skipped + ' tester ble hoppet over'); process.exit(1) }"
+        run: node -e "const { skipped, expected } = require('./e2e-resultat.json').stats; if (skipped !== 0 || !(expected > 0)) { console.error('Hoppet over: ' + skipped + ', bestått: ' + expected); process.exit(1) }"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
