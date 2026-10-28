@@ -1,5 +1,5 @@
 import { type SubmitEvent, useEffect, useId, useRef, useState } from 'react'
-import { MAX_DATES, MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH, type TodoDate } from './storage.ts'
+import { MAX_DATES, MAX_DESCRIPTION_LENGTH, MAX_TITLE_LENGTH, MAX_TODOS, type TodoDate } from './storage.ts'
 import {
   type FormErrors,
   formatDate,
@@ -15,6 +15,8 @@ interface TodoFormDialogProps {
   initial?: TodoDraft | undefined
   // true when the last valid save could not be stored
   hasSaveFailed?: boolean
+  // true for a new todo when there are already MAX_TODOS; the app then refuses to save it
+  isLimitReached?: boolean
   onSave: (draft: TodoDraft) => void
   onClose: () => void
 }
@@ -46,7 +48,13 @@ function firstInvalidField(errors: FormErrors): string | undefined {
 }
 
 // The form is mounted when it opens and unmounted when it closes, so it always starts from `initial`
-export default function TodoFormDialog({ initial, hasSaveFailed = false, onSave, onClose }: TodoFormDialogProps) {
+export default function TodoFormDialog({
+  initial,
+  hasSaveFailed = false,
+  isLimitReached = false,
+  onSave,
+  onClose,
+}: TodoFormDialogProps) {
   const dialogRef = useModalDialog()
   const formRef = useRef<HTMLFormElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
@@ -188,6 +196,11 @@ export default function TodoFormDialog({ initial, hasSaveFailed = false, onSave,
             <p className="hint">Maks {MAX_DATES} datoer per gjøremål.</p>
           )}
         </fieldset>
+        {isLimitReached && (
+          <p className="dlg-error" role="alert">
+            Du kan ha maks {MAX_TODOS} gjøremål. Slett et gjøremål før du legger til et nytt.
+          </p>
+        )}
         {hasSaveFailed && (
           <p className="dlg-error" role="alert">
             Kunne ikke lagre. Lagringen i nettleseren er full eller blokkert.

@@ -19,6 +19,11 @@ export const CORRUPT_COPY_KEY = 'aarhjul:v1:corrupt-copy'
 export const MAX_TITLE_LENGTH = 60
 export const MAX_DESCRIPTION_LENGTH = 500
 export const MAX_DATES = 12
+// Far more than anyone needs, and still quick to draw: 500 todos with 12 dates each are placed in about 25 ms.
+// Without a limit, a few thousand valid todos, from a bug or another page on the same origin, freeze the tab.
+export const MAX_TODOS = 500
+// Ids made by the app are 36 characters (crypto.randomUUID)
+export const MAX_ID_LENGTH = 64
 
 // February has 29 days so that 29 February can be stored all years.
 const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -72,7 +77,12 @@ function parseJson(raw: string): unknown {
 }
 
 function isTodoList(value: unknown): value is Todo[] {
-  return Array.isArray(value) && value.every(isTodo) && isUnique(value.map((todo) => todo.id))
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_TODOS &&
+    value.every(isTodo) &&
+    isUnique(value.map((todo) => todo.id))
+  )
 }
 
 function isTodo(value: unknown): value is Todo {
@@ -81,6 +91,7 @@ function isTodo(value: unknown): value is Todo {
   return (
     typeof id === 'string' &&
     id !== '' &&
+    id.length <= MAX_ID_LENGTH &&
     typeof title === 'string' &&
     title.length >= 1 &&
     title.length <= MAX_TITLE_LENGTH &&
