@@ -535,4 +535,16 @@ describe('TodoFormDialog, tegnteller', () => {
     save()
     expect(titleField()).toHaveAccessibleDescription('Tittelen kan ha maks 60 tegn.')
   })
+
+  it('viser et varsel når lagringen i nettleseren feilet', () => {
+    render(<TodoFormDialog hasSaveFailed onSave={vi.fn()} onClose={vi.fn()} />)
+    expect(within(dialog()).getByRole('alert')).toHaveTextContent(
+      'Kunne ikke lagre. Lagringen i nettleseren er full eller blokkert.',
+    )
+  })
+
+  it('har ikke noe varsel så lenge lagringen ikke har feilet', () => {
+    renderForm()
+    expect(within(dialog()).queryByRole('alert')).toBeNull()
+  })
 })

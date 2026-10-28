@@ -166,6 +166,36 @@ describe('loadTodos ved grenseverdiene', () => {
   })
 })
 
+describe('lagring som feiler', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('saveTodos sier fra når lagringen gikk', () => {
+    expect(saveTodos([validTodo()])).toBe(true)
+  })
+
+  it.each([
+    ['full', 'QuotaExceededError'],
+    ['blokkert', 'SecurityError'],
+  ])('saveTodos krasjer ikke når lagringen er %s, men sier fra', (_name, error) => {
+    saveTodos([validTodo()])
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Nei', error)
+    })
+    expect(saveTodos([validTodo({ id: 'b2' })])).toBe(false)
+    vi.restoreAllMocks()
+    expect(loadTodos()).toEqual({ status: 'ok', todos: [validTodo()] })
+  })
+
+  it('loadTodos gir «blocked» når nettleseren sperrer lagringen', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Sperret', 'SecurityError')
+    })
+    expect(loadTodos()).toEqual({ status: 'blocked' })
+  })
+})
+
 describe('keepCorruptCopy', () => {
   afterEach(() => {
     vi.restoreAllMocks()
