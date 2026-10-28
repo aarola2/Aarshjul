@@ -138,3 +138,33 @@ test('endringer i andre nøkler på samme adresse ignoreres', async ({ context }
   await expect(card(b, 'Dekkskift')).toBeVisible()
   await expect(card(b, 'Vårvask av garasjen')).toHaveCount(0)
 })
+
+test('et skjema som er åpent når den andre fanen lagrer ugyldige data, lukkes med bare varselet om ødelagte data', async ({
+  context,
+}) => {
+  const { a, b } = await openTwoTabs(context, [DEKKSKIFT])
+  await card(b, 'Dekkskift').getByRole('button', { name: 'Rediger «Dekkskift»' }).click()
+
+  await a.evaluate(([key, value]) => {
+    localStorage.setItem(key, value)
+  }, [STORAGE_KEY, '[{"id": "a1"'] as const)
+
+  await expect(form(b, 'Rediger gjøremål')).toHaveCount(0)
+  await expect(b.getByRole('alert')).toHaveCount(1)
+  await expect(b.getByRole('alert')).toContainText('Lagrede data var ødelagt.')
+  await expect(b.getByText('ble slettet i en annen fane')).toHaveCount(0)
+})
+
+test('kan lagringen ikke leses når den andre fanen lagrer, vises varselet om sperret lagring', async ({ context }) => {
+  const { a, b } = await openTwoTabs(context, [DEKKSKIFT])
+  await expect(card(b, 'Dekkskift')).toBeVisible()
+  // What the browser does when site data is blocked after the tab has started: reading throws
+  await b.evaluate(
+    'Storage.prototype.getItem = function () { throw new DOMException("Lagring er sperret", "SecurityError") }',
+  )
+
+  await create(a, 'Rense takrennene', '03.10')
+
+  await expect(b.getByRole('alert')).toContainText('Nettleseren tillater ikke lagring.')
+  await expect(card(b, 'Dekkskift')).toHaveCount(0)
+})
