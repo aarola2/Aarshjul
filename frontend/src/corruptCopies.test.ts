@@ -56,9 +56,25 @@ describe('kopier av ødelagte data', () => {
     expect(first()).toBeNull()
   })
 
-  it('er den første kopien lik dataene som vises nå, er det ingen eldre kopi å tilby', () => {
+  it('er de nye dataene lik den første kopien, blir den nyeste stående og tilbys som eldre kopi', () => {
     keepCorruptCopy('A')
     keepCorruptCopy('B')
+    expect(keepCorruptCopy('A')).toBe(true)
+    expect(first()).toBe('A')
+    expect(copy()).toBe('B')
+    expect(olderCorruptCopy('A')).toBe('B')
+  })
+
+  it('skriver den nyeste kopien når den mangler, selv om dataene er lik den første kopien', () => {
+    keepCorruptCopy('A')
+    keepCorruptCopy('B')
+    localStorage.removeItem(CORRUPT_COPY_KEY)
+    expect(keepCorruptCopy('A')).toBe(true)
+    expect(copy()).toBe('A')
+    expect(first()).toBe('A')
+  })
+
+  it('tilbyr ingen eldre kopi når den eneste kopien er lik dataene som vises nå', () => {
     keepCorruptCopy('A')
     expect(olderCorruptCopy('A')).toBeNull()
   })

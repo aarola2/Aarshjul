@@ -57,7 +57,10 @@ export function loadTodos(): LoadResult {
 export function keepCorruptCopy(raw: string): boolean {
   try {
     const current = localStorage.getItem(CORRUPT_COPY_KEY)
-    if (current !== null && current !== raw && localStorage.getItem(FIRST_CORRUPT_COPY_KEY) === null) {
+    const first = localStorage.getItem(FIRST_CORRUPT_COPY_KEY)
+    // Already kept as the first copy, so a different newest copy is left as it is instead of being lost
+    if (raw === first && current !== null && current !== raw) return true
+    if (current !== null && current !== raw && first === null) {
       localStorage.setItem(FIRST_CORRUPT_COPY_KEY, current)
     }
     localStorage.setItem(CORRUPT_COPY_KEY, raw)
