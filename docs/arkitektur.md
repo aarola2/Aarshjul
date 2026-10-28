@@ -50,6 +50,7 @@ All kode ligger i `frontend/src`. Testene ligger ved siden av koden (`*.test.ts(
 | `useToday.ts` | Dagens dato fra nettleseren. Den oppdateres ved midnatt og når fanen blir synlig igjen. |
 | `useOtherTabChanges.ts` | Lytter på `storage`-hendelsen og sier fra bare når en annen fane har endret `aarhjul:v1:todos` eller tømt lagringen. Andre nøkler på opprinnelsen ignoreres. |
 | `TodoGoneAlert.tsx` | Meldingen om at gjøremålet i en åpen dialog ble slettet i en annen fane. |
+| `csp.ts` | Content-Security-Policy og en Vite-plugin som legger den inn som meta-tag først i `<head>` i bygget. Brukes av `vite.config.ts`, ikke av appen. |
 
 **Datamodell.** Et gjøremål har `id`, `title` (1–60 tegn), `description` (0–500 tegn), `dates` (1–12 unike `{ month, day }`) og `createdAt` (ISO-tidsstempel). Det finnes ikke noe år, for alt gjentas hvert år. 29. februar lagres som det er og vises 28. februar i år uten skuddår.
 
@@ -94,7 +95,7 @@ Kommandoene kjøres fra `frontend/`.
 |---|---|---|---|
 | Enhet og komponent | Vitest + Testing Library (jsdom) | `npm test`, `npm test -- --coverage` | Logikk og komponenter, ved siden av koden. Dekningsgrensen er 80 % (linjer, grener, funksjoner, setninger), satt i `vite.config.ts`. |
 | Ende-til-ende | Playwright (Chromium) | `npm run e2e` | Brukerflyter mot utviklingsserveren. Én test per akseptkriterium i UI-issuene. Skjermbilder i `playwright-report/`. |
-| E2E mot bygget | Playwright | `npm run build` + `E2E_PREVIEW=1 npm run e2e` | Den samme pakken mot `dist/` med `vite preview`. Brukes av `staging`. |
+| E2E mot bygget | Playwright | `npm run build` + `E2E_PREVIEW=1 npm run e2e` | Den samme pakken mot `dist/` med `vite preview`. Brukes av `staging`. Bare her kjører `e2e/csp.spec.ts`, som sjekker CSP-en og at hovedflyten ikke gir brudd på den. I dev-modus, også i CI-jobben `e2e`, hoppes den over, fordi CSP-en bare finnes i bygget. |
 | Statisk | ESLint (strictTypeChecked), TypeScript (strict) | `npm run lint`, `npm run typecheck` | Kodestil og typer. |
 
 I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka låses med `page.clock.setFixedTime`, og siden åpnes med relative stier (`page.goto('./')`).
@@ -119,6 +120,7 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 | En e2e-test feiler bare på visse datoer | Testen bruker dagens dato uten å låse klokka. Bruk `page.clock.setFixedTime`. |
 | `produksjon` står som skipped | Variabelen `PRODUKSJON_GODKJENNING_VERIFISERT` er ikke `true`, eller navn og verdi er byttet om. Jobben hoppes også over når `staging` feiler eller `bygg` er hoppet over (for eksempel fordi CI ikke var grønn). |
 | `produksjon` står som «Waiting for review» | Riktig: sperren venter på godkjenning fra eieren. |
+| Hvit side eller manglende stil i bygget, og «Content Security Policy» i konsollen | Noe lastes som CSP-en i `src/csp.ts` ikke tillater, for eksempel et inline-skript, en ekstern font eller et `data:`-bilde. Finn direktivet i konsollmeldingen. Last ressursen fra egen adresse, eller utvid policyen med en begrunnelse. `npm run dev` har ingen CSP, så feilen vises bare med `npm run build` + `npm run preview`. |
 | `staging` feiler på «Verifiser digest» | Artefakten er endret mellom `bygg` og `staging`. Ikke publiser. Kjør utrullingen på nytt fra en ny commit på `main`. |
 
 ## Sikkerhet og trusselmodell
@@ -137,6 +139,7 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 |---|---|
 | `localStorage` → appen | Alt som leses er ubetrodd, både ved oppstart og når en annen fane (eller en annen side på opprinnelsen) har endret nøkkelen. `storage.ts` sjekker nøyaktige nøkler, typer, lengder, gyldige datoer, unike id-er og datoer, og ISO-tidsstempel. Ugyldige data brukes ikke. Appen starter tomt, viser en melding og prøver å ta vare på en kopi. Kopien kan også lastes ned fra meldingen så lenge den vises. |
 | Skjemaet → appen | `todoForm.ts` validerer lengde og dato før noe lagres. Tekst vises bare gjennom React, som escaper den. Appen bruker ikke `dangerouslySetInnerHTML`, `innerHTML` eller `eval`. |
+| Skript og ressurser på siden | Content-Security-Policy i bygget (`src/csp.ts`): `default-src 'none'`, og skript, stil, bilder og fonter bare fra egen adresse. Ingen `'unsafe-inline'` eller `'unsafe-eval'`. Kommer et skript inn på siden på annen måte, får det ikke kjøre. GitHub Pages kan ikke sende headere, så policyen ligger i en meta-tag. |
 | Nedlasting av ødelagte data | Kopien lastes ned som Blob med fast filnavn (`aarshjul-odelagte-data.json`) og typen `application/json`. Innholdet vises aldri på siden. |
 | Bygg og CI | Actions er festet til full SHA. Arbeidsflytene har `permissions: contents: read` som standard. Det finnes ingen `pull_request_target`. `persist-credentials: false`. gitleaks, CodeQL, `npm audit` og Dependabot. |
 | Utrulling | Én artefakt med digest-sjekk mellom miljøene. Produksjon er stengt med variabel (i repoet) og required reviewers (i GitHub-innstillingene, bevist med «Waiting for review»). |
@@ -147,7 +150,6 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 - **Samtidige endringer i samme gjøremål.** Har to faner skjemaet åpent for det samme gjøremålet, vinner den som lagrer sist. Endringer i ulike gjøremål går ikke tapt. Risikoen er godtatt fordi brukerhistorien gjelder én person på én PC.
 
 **Åpne risikoer** (har egne issues)
-- Appen har ingen Content-Security-Policy (#45).
 - Dependabot har ingen ventetid før nye versjoner (#49).
 
 **Ikke relevant, og hvorfor**

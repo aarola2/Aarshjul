@@ -1,10 +1,11 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
+import { contentSecurityPolicy } from './src/csp.ts'
 
 // GitHub Pages serves the app under /<repo>/
 export default defineConfig({
   base: '/Aarshjul/',
-  plugins: [react()],
+  plugins: [react(), contentSecurityPolicy()],
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
