@@ -20,7 +20,7 @@ flowchart LR
 ```
 
 Hovedflyten:
-1. `App` leser lagringen én gang ved oppstart (`loadTodos`). Er dataene gyldige, blir de tilstanden. Er de ødelagte, starter appen med en tom liste, tar vare på en kopi og viser en melding.
+1. `App` leser lagringen én gang ved oppstart (`loadTodos`). Er dataene gyldige, blir de tilstanden. Er de ødelagte, starter appen med en tom liste og viser en melding. Den prøver å ta vare på en kopi i lagringen. Går ikke det, for eksempel fordi lagringen er full, kan kopien bare lastes ned fra meldingen.
 2. Brukeren fyller ut skjemaet. `todoForm.ts` validerer tittel, beskrivelse og datoer og gir enten et utkast eller feilmeldinger per felt.
 3. `App` lagrer først og oppdaterer tilstanden etterpå. Hjulet og sidekolonnen viser derfor aldri noe som ikke er lagret.
 4. Hjulet og sidekolonnen tegnes ut fra tilstanden og dagens dato (`useToday`).
@@ -34,8 +34,8 @@ All kode ligger i `frontend/src`. Testene ligger ved siden av koden (`*.test.ts(
 | `main.tsx` | Starter React i `#root`. |
 | `App.tsx` | Eier tilstanden: gjøremålene, hvilken dialog som er åpen, og meldingen om ødelagte data. Lagrer gjennom `storage.ts`. |
 | `Wheel.tsx` | Tegner hjulet som SVG: måneder i årstidsfarger, dagsstreker, datotall, ringen rundt dagens dato og prikkene. Prikkene er knapper med opplesbar tekst («Tittel, 15. mai»). |
-| `wheelGeometry.ts` | Månedene, årstidene og geometrien til hjulet, for eksempel vinkel per dag. Januar ligger øverst, og månedene går med klokken. |
-| `dotPlacement.ts` | Plasserer prikkene langs datolinjen. Startplassen utledes av en hash av id-en (FNV-1a), så plasseringen er lik hver gang. Den sjekker at to prikker aldri overlapper. |
+| `wheelGeometry.ts` | Månedene, årstidene og geometrien til hjulet, for eksempel vinkel per dag. Januar starter øverst (kl. 12), og månedene går med klokken. |
+| `dotPlacement.ts` | Plasserer prikkene langs datolinjen. Startplassen utledes av en hash av id-en (FNV-1a), så plasseringen er lik hver gang. Prikker på samme dato får aldri samme plass. En plass som holder avstand til prikker på nærliggende datoer, foretrekkes, men er ikke garantert. |
 | `MonthColumn.tsx` | Sidekolonnen «Denne måneden»: ett kort per gjøremål, eller tomtilstanden. |
 | `monthList.ts` | Finner gjøremålene i en måned og sorterer dem etter første dato. |
 | `DateBadge.tsx` | En dato i årstidsfarge. Dagens dato er merket. 29. februar vises 28. februar i år uten skuddår. |
@@ -74,8 +74,10 @@ npm run preview    # serverer dist/ på http://localhost:4173/Aarshjul/
 3. **`produksjon`**: publiserer den samme artefakten til GitHub Pages etter en ny digest-sjekk. Ingenting bygges på nytt mellom miljøene.
 
 Produksjon er stengt (fail closed) på to måter:
-- Jobben kjører bare når repo-variabelen `PRODUKSJON_GODKJENNING_VERIFISERT` er `true`.
-- Miljøet `production` krever godkjenning fra eieren (required reviewers). Administratorer kan ikke omgå det, og bare `main` er tillatt.
+- **I repoet:** Jobben kjører bare når repo-variabelen `PRODUKSJON_GODKJENNING_VERIFISERT` er `true` (`deploy.yml`).
+- **I GitHub-innstillingene** (utenfor repoet, kontrolleres av eieren): Miljøet `production` skal kreve godkjenning fra eieren (required reviewers). «Allow administrators to bypass» skal være av, og bare `main` skal være tillatt.
+
+Innstillingene kan ikke leses fra repoet, så de må bevises og ikke antas. Beviset er en kjøring der `produksjon` står som «Waiting for review». Det ble bekreftet av eieren 28.10.2026, før v1.0.0.
 
 > Viktig rekkefølge: GitHub lager et miljø automatisk første gang en jobb bruker det. Lag derfor `production` med beskyttelse *før* variabelen settes. Ellers kan første kjøring publisere uten godkjenning.
 
@@ -97,7 +99,7 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 **CI** (`.github/workflows/ci.yml`) kjører på hver PR og hver push til `main`:
 - **`kontroll`**: lint, typecheck, tester med dekning, og build.
 - **`avhengigheter`**: `npm audit --audit-level=high`.
-- **`hemmeligheter`**: gitleaks over hele historikken.
+- **`hemmeligheter`**: gitleaks over commitene i PR-en eller pushen.
 - **`kodeanalyse`**: CodeQL for JavaScript/TypeScript og for Actions.
 - **`e2e`**: Playwright, med rapporten som artefakten `playwright-rapport`.
 
@@ -110,7 +112,7 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 | Endringer forsvinner når appen er åpen i to faner | Den siste fanen som lagrer, overskriver den andre (#47). Bruk én fane. |
 | Lokal e2e gir rare resultater | `reuseExistingServer` er på lokalt, så Playwright gjenbruker det som allerede kjører på port 5173. Sjekk med `lsof -nP -iTCP:5173 -sTCP:LISTEN`, og stopp den andre serveren. |
 | En e2e-test feiler bare på visse datoer | Testen bruker dagens dato uten å låse klokka. Bruk `page.clock.setFixedTime`. |
-| `produksjon` står som skipped | Variabelen `PRODUKSJON_GODKJENNING_VERIFISERT` er ikke `true`, eller navn og verdi er byttet om. |
+| `produksjon` står som skipped | Variabelen `PRODUKSJON_GODKJENNING_VERIFISERT` er ikke `true`, eller navn og verdi er byttet om. Jobben hoppes også over når `staging` feiler eller `bygg` er hoppet over (for eksempel fordi CI ikke var grønn). |
 | `produksjon` står som «Waiting for review» | Riktig: sperren venter på godkjenning fra eieren. |
 | `staging` feiler på «Verifiser digest» | Artefakten er endret mellom `bygg` og `staging`. Ikke publiser. Kjør utrullingen på nytt fra en ny commit på `main`. |
 
@@ -128,15 +130,16 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 
 | Grense | Tiltak |
 |---|---|
-| `localStorage` → appen | Alt som leses er ubetrodd. `storage.ts` sjekker nøyaktige nøkler, typer, lengder, gyldige datoer, unike id-er og datoer, og ISO-tidsstempel. Ugyldige data brukes ikke. Appen starter tomt, tar vare på en kopi og viser en melding. |
+| `localStorage` → appen | Alt som leses er ubetrodd. `storage.ts` sjekker nøyaktige nøkler, typer, lengder, gyldige datoer, unike id-er og datoer, og ISO-tidsstempel. Ugyldige data brukes ikke. Appen starter tomt, viser en melding og prøver å ta vare på en kopi (kopien kan alltid lastes ned). |
 | Skjemaet → appen | `todoForm.ts` validerer lengde og dato før noe lagres. Tekst vises bare gjennom React, som escaper den. Appen bruker ikke `dangerouslySetInnerHTML`, `innerHTML` eller `eval`. |
 | Nedlasting av ødelagte data | Kopien lastes ned som Blob med fast filnavn (`aarshjul-odelagte-data.json`) og typen `application/json`. Innholdet vises aldri på siden. |
 | Bygg og CI | Actions er festet til full SHA. Arbeidsflytene har `permissions: contents: read` som standard. Det finnes ingen `pull_request_target`. `persist-credentials: false`. gitleaks, CodeQL, `npm audit` og Dependabot. |
-| Utrulling | Én artefakt med digest-sjekk mellom miljøene. Produksjon er stengt med variabel og required reviewers. |
+| Utrulling | Én artefakt med digest-sjekk mellom miljøene. Produksjon er stengt med variabel (i repoet) og required reviewers (i GitHub-innstillingene, bevist med «Waiting for review»). |
 
 **Godtatte risikoer**
 - **Delt opprinnelse.** Alle Pages-sider under `aarola2.github.io` kan lese, endre og slette `aarhjul:v1:*`. Et eventuelt rotrepo `aarola2.github.io` kan i tillegg registrere en service worker for hele opprinnelsen. Prefikset hindrer bare at nøkler kolliderer ved et uhell. Det er ingen sikkerhetsgrense. Risikoen er godtatt fordi bare eieren kan publisere på opprinnelsen og dataene er lite sensitive. Et eget domene er løsningen hvis det blir behov.
 - **Clickjacking.** GitHub Pages kan ikke sette `X-Frame-Options` eller `frame-ancestors`, og de virker ikke i en meta-tag. Moderne nettlesere deler opp lagringen for innrammede sider fra andre nettsteder, så en side som rammer inn appen, ser ikke brukerens data.
+- **Flere faner (godtatt til #47 er løst).** Appen leser lagringen bare ved oppstart, så den siste fanen som lagrer, overskriver den andre. Risikoen er godtatt fordi brukerhistorien gjelder én person på én PC, og konsekvensen er at data kan forsvinne, ikke at de lekker.
 
 **Åpne risikoer** (har egne issues)
 - Appen har ingen Content-Security-Policy (#45).
