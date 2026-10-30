@@ -161,9 +161,7 @@ Eieren har bekreftet at både `e2e` og `e2e-bygg` er påkrevde. `e2e-bygg` ble l
 - **Delt opprinnelse.** Alle Pages-sider under `aarola2.github.io` kan lese, endre og slette `aarhjul:v1:*`. Et eventuelt rotrepo `aarola2.github.io` kan i tillegg registrere en service worker for hele opprinnelsen. Prefikset hindrer bare at nøkler kolliderer ved et uhell. Det er ingen sikkerhetsgrense. Av samme grunn betyr `'self'` i CSP-en hele `aarola2.github.io`, så skript fra eierens andre Pages-prosjekter er også tillatt. Tillitsgrensen er derfor alle Pages-repoer under `aarola2`: alle som har skrivetilgang til ett av dem, og forsyningskjeden deres (avhengigheter og Actions). Grensen er ikke sterkere enn det svakeste av disse repoene. Risikoen er godtatt fordi dataene er lite sensitive. Et eget domene er løsningen hvis det blir behov.
 - **Clickjacking.** GitHub Pages kan ikke sette `X-Frame-Options` eller `frame-ancestors`, og de virker ikke i en meta-tag. Moderne nettlesere deler opp lagringen for innrammede sider fra andre nettsteder, så en side som rammer inn appen, ser ikke brukerens data.
 - **Samtidige endringer i samme gjøremål.** Har to faner skjemaet åpent for det samme gjøremålet, vinner den som lagrer sist. Endringer i ulike gjøremål går ikke tapt. Risikoen er godtatt fordi brukerhistorien gjelder én person på én PC.
-
-**Åpne risikoer** (har egne issues)
-- Dependabot har ingen ventetid før nye versjoner (#49).
+- **Kort ventetid før nye versjoner.** Dependabot foreslår en ny versjon tidligst 3 dager etter at den er publisert. Det er GitHubs standard, og `dependabot.yml` har ingen egen `cooldown`. En ondsinnet versjon som blir oppdaget senere enn det, kan derfor dukke opp i en Dependabot-PR. Ventetiden gjelder ikke sikkerhetsoppdateringer. 7 dager ble vurdert og valgt bort (#49): PR-ene merges aldri automatisk, CI kjører `npm audit`, og bare React kommer med i bygget. Hvis prosjektet får reell bruk, kan `cooldown` med `default-days: 7` legges inn for både `npm` og `github-actions`.
 
 **Ikke relevant, og hvorfor**
 - **Autentisering, autorisasjon per rolle, IDOR/BOLA:** Det finnes ingen innlogging, ingen roller og ingen ressurser på en server.
