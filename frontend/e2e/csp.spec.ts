@@ -5,7 +5,7 @@ const TITLE = 'Rense takrennene'
 
 test.skip(
   process.env['E2E_PREVIEW'] !== '1',
-  'CSP-en legges bare inn i bygget. Kjøres med E2E_PREVIEW=1, lokalt og i staging.',
+  'CSP-en legges bare inn i bygget. Kjøres med E2E_PREVIEW=1, lokalt, i CI-jobben e2e-bygg og i staging.',
 )
 
 const column = (page: Page) => page.getByRole('complementary', { name: 'Denne måneden' })

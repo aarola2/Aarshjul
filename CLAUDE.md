@@ -22,7 +22,7 @@ Kjøres fra mappen som står i overskriften.
 - Build: `npm run build`
 - Typecheck: `npm run typecheck`
 - E2E (Playwright): `npm run e2e` (første gang: `npx playwright install chromium`). Rapport med skjermbilder i `playwright-report/`.
-- E2E mot bygget `dist/`: `E2E_PREVIEW=1 npm run e2e` (brukes av staging i `deploy.yml`)
+- E2E mot bygget `dist/`: `E2E_PREVIEW=1 npm run e2e` (brukes av CI-jobben `e2e-bygg` og av staging i `deploy.yml`)
 
 ## Mappestruktur
 

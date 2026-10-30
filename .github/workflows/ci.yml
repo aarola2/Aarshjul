@@ -92,3 +92,39 @@ jobs:
             frontend/playwright-report/
             frontend/test-results/
           retention-days: 14
+
+  # Den samme e2e-pakken mot bygget dist/, der CSP-en finnes. Fanger det som bare feiler i bygget, før merge.
+  e2e-bygg:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run e2e -- --reporter=html,json   # webServer serverer dist/ med vite preview
+        env:
+          E2E_PREVIEW: '1'
+          PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-resultat.json
+      # Uten E2E_PREVIEW hoppes csp.spec.ts stille over, og jobben ville blitt grønn uten å sjekke CSP-en.
+      # Feiler også hvis tallene mangler i rapporten, eller ingen tester kjørte.
+      - name: Ingen tester hoppet over
+        run: |
+          node -e "const { skipped, expected } = require('./e2e-resultat.json').stats; if (skipped !== 0 || !(expected > 0)) { console.error('Hoppet over: ' + skipped + ', bestått: ' + expected); process.exit(1) }"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: playwright-rapport-bygg
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 14
