@@ -109,6 +109,14 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 - **`e2e`**: Playwright mot utviklingsserveren, med rapporten som artefakten `playwright-rapport`. Dev-modus gir React StrictMode med dobbelte effekter, som har fanget feil bygget ikke viser.
 - **`e2e-bygg`**: den samme pakken mot bygget `dist/` (`E2E_PREVIEW=1`), med rapporten som artefakten `playwright-rapport-bygg`. Her kjører CSP-testen. Jobben feiler hvis noen tester er hoppet over, så CSP-testen ikke kan forsvinne stille.
 
+**Påkrevde sjekker.** En CI-jobb stopper ingen merge før den er lagt inn som påkrevd sjekk i rulesettet på `main`. Før det er den grønn og ser trygg ut uten å beskytte noe. Rulesettet ligger i GitHub-innstillingene. Agenten kan verken lese eller endre det, så eieren må legge inn hver ny jobb selv:
+
+1. Settings → Rules → Rulesets, og åpne rulesettet for `main`.
+2. Under **Require status checks to pass**: **Add checks**, søk på hele jobbnavnet (for eksempel `e2e-bygg`, ikke bare `e2e`) og velg kilden GitHub Actions.
+3. **Save changes**.
+
+Eieren har bekreftet at både `e2e` og `e2e-bygg` er påkrevde. `e2e-bygg` ble lagt inn 30.10.2026 (#55). Det ble bevist ved at #63, som var laget før jobben fantes, gikk fra klar til BLOCKED, og ble klar igjen etter at `e2e-bygg` hadde kjørt grønt på den.
+
 ## Feilsøke
 
 | Symptom | Årsak og hva du gjør |
@@ -124,6 +132,8 @@ I e2e-testene velges elementer med `getByRole`/`getByLabel`/`getByText`. Klokka 
 | `produksjon` står som skipped | Variabelen `PRODUKSJON_GODKJENNING_VERIFISERT` er ikke `true`, eller navn og verdi er byttet om. Jobben hoppes også over når `staging` feiler eller `bygg` er hoppet over (for eksempel fordi CI ikke var grønn). |
 | `produksjon` står som «Waiting for review» | Riktig: sperren venter på godkjenning fra eieren. |
 | Hvit side eller manglende stil i bygget, og «Content Security Policy» i konsollen | Noe lastes som CSP-en i `src/csp.ts` ikke tillater, for eksempel et inline-skript, en ekstern font eller et `data:`-bilde. Finn direktivet i konsollmeldingen. Last ressursen fra egen adresse, eller utvid policyen med en begrunnelse. `npm run dev` har ingen CSP, så feilen vises bare med `npm run build` + `npm run preview`, og i CI-jobben `e2e-bygg`. |
+| En PR står som BLOCKED selv om alle sjekker er grønne | En påkrevd jobb har aldri kjørt på PR-en, typisk fordi PR-en ble laget før jobben fantes. Oppdater branchen mot `main`: kommenter `@dependabot rebase` på en Dependabot-PR, ellers flett `main` inn (se `.claude/POLICY.md`). |
+| En ny CI-jobb er grønn, men stopper ikke merge | Jobben er ikke påkrevd i rulesettet. Se «Påkrevde sjekker» under «Teste». |
 | `staging` feiler på «Verifiser digest» | Artefakten er endret mellom `bygg` og `staging`. Ikke publiser. Kjør utrullingen på nytt fra en ny commit på `main`. |
 
 ## Sikkerhet og trusselmodell
